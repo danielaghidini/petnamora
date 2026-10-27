@@ -40,7 +40,6 @@ model Dog {
   healthTests Boolean @default(false)
   neutered Boolean @default(false)
   active Boolean @default(true)
-  demo Boolean @default(false)
   createdAt DateTime @default(now())
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   sentLikes Like[] @relation("LikesFrom")
@@ -48,7 +47,7 @@ model Dog {
   matchesA Match[] @relation("MatchA")
   matchesB Match[] @relation("MatchB")
   reports Report[]
-  @@index([active, demo, breed, sex, state])
+  @@index([active, breed, sex, state])
   @@index([ownerId])
 }
 model Like {

@@ -15,7 +15,6 @@ export type DogProfile = {
   healthTests: boolean;
   neutered: boolean;
   active: boolean;
-  demo: boolean;
 };
 export type Viewer = { id: string; name: string; email: string };
 export type MatchProfile = {

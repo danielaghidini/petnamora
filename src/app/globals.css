@@ -532,7 +532,7 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 11px;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   padding: 13px 15px;
   gap: 16px;
   margin-bottom: 31px;
@@ -541,42 +541,51 @@ h1 {
 }
 .search-field {
   display: flex;
-  align-items: center;
-  gap: 11px;
+  flex-direction: column;
+  gap: 7px;
   flex: 1;
   min-width: 160px;
 }
-.search-field > svg {
-  color: var(--text-secondary);
-}
-.search-field > label {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-.search-field label > span {
+.search-field > span {
   font-size: var(--font-size-caption);
   color: var(--text-secondary);
-  margin-bottom: 5px;
+}
+.search-input {
+  position: relative;
+}
+.search-input > svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
 }
 .search-field input {
-  border: 0;
-  background: transparent;
-  color: var(--text-secondary);
+  border: 1px solid color-mix(in srgb, var(--text-secondary) 65%, var(--line));
+  border-radius: 7px;
+  background: var(--surface-input);
+  color: var(--ink);
   width: 100%;
-  font-weight: 600;
+  min-height: 44px;
   font-size: var(--font-size-body);
-  padding: 0;
-  outline: 0;
+  padding: 9px 12px 9px 39px;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.search-field input:hover {
+  border-color: var(--text-secondary);
+}
+.search-field input:focus {
+  border-color: var(--pink);
+  outline: 2px solid var(--pink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--pink-soft);
 }
 .search-field input::placeholder {
   color: var(--text-secondary);
   opacity: 1;
 }
 .location-field {
-  border-left: 1px solid var(--line);
-  padding-left: 20px;
   flex: 0.8;
 }
 .filter-button {
@@ -644,7 +653,7 @@ h1 {
   margin-bottom: 20px;
   gap: 15px;
 }
-.section-heading h2 {
+.section-heading :is(h1, h2) {
   font-size: var(--font-size-section-title);
   font-weight: 700;
   letter-spacing: -0.35px;
@@ -652,7 +661,7 @@ h1 {
   align-items: center;
   gap: 10px;
 }
-.section-heading h2 > span {
+.section-heading :is(h1, h2) > span {
   font-size: var(--font-size-caption);
   background: var(--tag-surface);
   color: var(--text-secondary);
@@ -749,17 +758,6 @@ h1 {
 .heart-button.is-liked {
   color: var(--pink);
 }
-.demo-badge {
-  position: absolute;
-  bottom: 9px;
-  left: 10px;
-  background: #ffffffde;
-  color: #776b7e;
-  font-size: var(--font-size-badge);
-  padding: 4px 7px;
-  border-radius: 4px;
-  pointer-events: none;
-}
 .dog-card-body {
   padding: 15px 16px 14px;
 }
@@ -835,12 +833,6 @@ h1 {
 .dog-tags > .health-tag {
   color: var(--success-text);
   background: var(--success-surface);
-}
-.demo-disclosure {
-  font-size: var(--font-size-caption);
-  line-height: 1.7;
-  color: var(--text-secondary);
-  margin-top: 15px;
 }
 .care-strip {
   margin-top: 30px;
@@ -1059,6 +1051,9 @@ h1 {
   padding: 26px;
   box-shadow: var(--modal-shadow);
   animation: fade-in 0.18s ease-out;
+}
+.modal:has(.auth-emblem) {
+  max-width: 520px;
 }
 .modal-wide {
   max-width: 690px;
@@ -1302,15 +1297,6 @@ h1 {
   color: var(--text-secondary);
   margin-top: 13px;
   width: 100%;
-}
-.demo-detail {
-  font-size: var(--font-size-caption);
-  line-height: 1.6;
-  color: var(--text-secondary);
-  background: var(--pink-soft);
-  padding: 8px;
-  border-radius: 5px;
-  margin-top: 10px;
 }
 .chat-note {
   display: flex;
@@ -1572,10 +1558,6 @@ h1 {
   .page-heading h1 {
     font-size: 26px;
   }
-  .location-field {
-    border: 0;
-    padding: 0;
-  }
   .search-field {
     flex: 1 1 40%;
   }
@@ -1677,7 +1659,7 @@ h1 {
     gap: 16px;
     margin-bottom: 26px;
   }
-  .search-field > label > span {
+  .search-field > span {
     font-size: var(--font-size-caption);
   }
   .search-field input {
@@ -1690,7 +1672,7 @@ h1 {
     flex: 1 1 55%;
     font-size: var(--font-size-caption);
   }
-  .section-heading h2 {
+  .section-heading :is(h1, h2) {
     font-size: var(--font-size-section-title);
     gap: 7px;
   }

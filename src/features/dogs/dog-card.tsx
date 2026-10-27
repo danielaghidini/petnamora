@@ -43,7 +43,6 @@ export function DogCard({
         >
           <Heart size={19} fill={liked ? "currentColor" : "none"} />
         </button>
-        {dog.demo && <span className="demo-badge">Cachorro de exemplo</span>}
       </div>
       <div className="dog-card-body">
         <div className="dog-title">

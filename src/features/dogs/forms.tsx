@@ -252,7 +252,7 @@ export function DogForm({
             required
             minLength={2}
             maxLength={50}
-            placeholder="Ex.: Amora"
+            placeholder="Nome do seu cachorro"
           />
         </label>
         <label>
@@ -263,12 +263,13 @@ export function DogForm({
             required
             minLength={2}
             maxLength={60}
-            placeholder="Ex.: Golden Retriever"
+            placeholder="Raça do seu cachorro"
           />
         </label>
         <label>
           Sexo
-          <select name="sex" defaultValue={dog?.sex || "FEMALE"}>
+          <select name="sex" defaultValue={dog?.sex ?? ""} required>
+            <option value="" disabled>Selecione o sexo</option>
             <option value="FEMALE">Fêmea</option>
             <option value="MALE">Macho</option>
           </select>
@@ -278,7 +279,8 @@ export function DogForm({
           <input
             type="number"
             name="ageMonths"
-            defaultValue={dog?.ageMonths || 24}
+            defaultValue={dog?.ageMonths ?? ""}
+            placeholder="Idade do seu cachorro"
             min={1}
             max={240}
             required
@@ -286,7 +288,8 @@ export function DogForm({
         </label>
         <label>
           Porte
-          <select name="size" defaultValue={dog?.size || "Médio"}>
+          <select name="size" defaultValue={dog?.size ?? ""} required>
+            <option value="" disabled>Selecione o porte</option>
             <option>Pequeno</option>
             <option>Médio</option>
             <option>Grande</option>
@@ -294,7 +297,8 @@ export function DogForm({
         </label>
         <label>
           Estado
-          <select name="state" defaultValue={dog?.state || "SP"}>
+          <select name="state" defaultValue={dog?.state ?? ""} required>
+            <option value="" disabled>Selecione o estado</option>
             {states.map((state) => (
               <option key={state}>{state}</option>
             ))}
@@ -309,7 +313,7 @@ export function DogForm({
           required
           minLength={2}
           maxLength={80}
-          placeholder="Ex.: Campinas"
+          placeholder="Cidade onde seu cachorro mora"
         />
       </label>
       <label>

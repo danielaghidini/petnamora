@@ -8,10 +8,10 @@
     "start": "node scripts/start.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:migrations": "node --test tests/migrations/*.test.mjs",
     "db:generate": "prisma generate",
     "db:local": "node scripts/local-database.mjs",
-    "db:migrate": "prisma migrate deploy",
-    "db:seed": "node scripts/seed.mjs"
+    "db:migrate": "prisma migrate deploy"
   },
   "dependencies": {
     "@next/env": "16.1.6",
