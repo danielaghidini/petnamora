@@ -30,3 +30,12 @@ O servidor standalone também foi iniciado localmente com `npm run start`. A pá
 O fluxo de autenticação, perfil e conversa foi exercitado pelas APIs; no navegador foram verificados a tela inicial, busca e diálogos, sem criação de conta pela interface. Não houve teste em dispositivo móvel físico, auditoria de segurança ou teste de carga. Veja os limites de lançamento no README.
 
 ![Prévia da aplicação](screenshots/petnamora-preview.png)
+
+## Integração Cloudflare Images — 27/10/2026
+
+- TypeScript, ESLint e compilação de produção Next.js passaram; os assets standalone foram preparados. Como não houve mudança no schema, foi executado `next build` sem regenerar o Prisma Client que o servidor local mantém aberto.
+- Testes com respostas simuladas da API Cloudflare confirmaram o envio multipart autenticado, bytes e MIME corretos, IDs `petnamora/<uuid>`, identificação do criador e retorno da URL da variante `public`.
+- O schema dos perfis aceitou a URL da conta configurada e rejeitou outras contas, prefixos, variantes, HTTP, host adulterado, query strings e caminhos manipulados.
+- Respostas de erro, timeout, JSON inválido e ausência da variante `public` retornaram erro sem gravar no disco. Credenciais ausentes e provedor desconhecido impediram o upload antes de qualquer requisição externa.
+- No servidor de desenvolvimento, o fluxo real foi verificado por HTTP: cadastro temporário, upload autenticado, leitura pública dos mesmos bytes, criação do perfil e consulta da URL persistida no PostgreSQL próprio. Upload sem sessão, origem externa, assinatura de imagem inválida e arquivo acima de 5 MB foram rejeitados. A conta, perfil, sessão e arquivo de teste foram removidos.
+- Nenhum upload real à Cloudflare foi feito nesta etapa. A ativação no Railway depende das três variáveis de conta/token/hash; nenhum segredo foi incluído no Git.

@@ -23,6 +23,7 @@ Abra http://localhost:3003. `db:local` cria `.env` com credenciais aleatórias, 
 
 - Cadastro e login do tutor, senha com bcrypt, sessão revogável no banco e cookie HttpOnly.
 - Cadastro e edição de até cinco cães por tutor, foto JPG/PNG/WebP, raça, sexo, idade em meses, porte, cidade/UF, descrição e informações de saúde declaradas.
+- Fotos no Cloudflare Images em produção, com entrega pela CDN; armazenamento local para desenvolvimento.
 - Busca por raça e cidade; filtros por sexo, porte e pedigree declarado.
 - Curtidas entre cães ativos, não castrados, de sexos opostos e tutores diferentes; match somente com reciprocidade.
 - Chat persistente exclusivo dos tutores do match; atualização por polling a cada cinco segundos enquanto a página está visível, com as 100 mensagens mais recentes.
@@ -59,8 +60,27 @@ npm run build
 
 Sem cobrança, recuperação de senha, verificação de e-mail, verificação documental, equipe/painel de moderação, notificações e geolocalização por raio. Saúde e pedigree são autodeclarados, sem selo de certificação. O app não avalia aptidão veterinária para reprodução. Busca limitada aos 60 resultados mais recentes; curtidas e conexões, a 100 registros.
 
-O limitador de login é por e-mail e processo; substitua por proteção compartilhada por conta/IP antes de escalar ou abrir ao público. Upload local requer volume persistente em produção; a validação atual confere assinatura binária e tamanho e deve evoluir para decodificação/normalização e cotas. As sessões expiradas e fotos órfãs precisam de limpeza periódica. Defina política de privacidade e exclusão/exportação de dados e implemente moderação antes de lançamento público.
+O limitador de login é por e-mail e processo; substitua por proteção compartilhada por conta/IP antes de escalar ou abrir ao público. A validação de upload confere assinatura binária e tamanho e deve evoluir para decodificação/normalização e cotas. As sessões expiradas e fotos órfãs (inclusive uploads abandonados na Cloudflare) precisam de limpeza periódica. Defina política de privacidade e exclusão/exportação de dados e implemente moderação antes de lançamento público.
 
-## Deploy futuro
+## Fotos na Cloudflare
 
-Nenhum serviço externo foi criado. O build gera saída standalone, como no Meu Site Perfeito. Configure um projeto próprio no Railway (ou outro host Node), PostgreSQL próprio, segredo JWT aleatório com pelo menos 32 caracteres e `APP_URL` HTTPS. Aplique `npm run db:migrate` antes de iniciar. Use `npm run start` ou prepare os assets de `.next/standalone` antes de executar seu servidor diretamente. Monte um volume no diretório de `UPLOAD_DIR` ou substitua o adaptador de fotos por Cloudflare Images/R2. Não copie `.env`, clientes ou credenciais do outro SaaS.
+O Pet Namora usa **Cloudflare Images**, como o Meu Site Perfeito. A mesma conta pode atender os dois produtos: os novos uploads recebem IDs `petnamora/<uuid>` e metadados `app: petnamora`. Esse prefixo organiza as imagens; não cria isolamento de permissões dentro da conta. Nenhuma tabela ou cadastro do Meu Site Perfeito é acessado pela integração.
+
+No Railway, configure estas variáveis no serviço `petnamora`:
+
+```dotenv
+PHOTO_STORAGE=cloudflare
+CLOUDFLARE_ACCOUNT_ID=<ID da conta Cloudflare Images>
+CLOUDFLARE_API_TOKEN=<token com permissão Images Write nessa conta>
+CLOUDFLARE_ACCOUNT_HASH=<hash de entrega do Cloudflare Images>
+```
+
+A conta precisa ter a variante `public`, já usada pelo Meu Site Perfeito. Prefira um token próprio para o Pet Namora, limitado a Images nessa conta. Nunca use uma variável `NEXT_PUBLIC_` para o token. As fotos são públicas, como os perfis, e suas URLs ficam no PostgreSQL do Pet Namora. O servidor envia o arquivo à Cloudflare; o navegador carrega as imagens diretamente de `imagedelivery.net`. Só são aceitas URLs da conta configurada, no prefixo `petnamora/`, com a variante `public`.
+
+Em desenvolvimento, o padrão continua sendo `local`. Em produção, o padrão é `cloudflare`: configuração ausente ou falha de upload retorna erro, sem salvar silenciosamente no disco temporário. Para usar a Cloudflare localmente, configure as mesmas variáveis no `.env` ignorado pelo Git e reinicie o servidor. O limite continua em 5 MB para JPG, PNG e WebP.
+
+Uploads locais existentes continuam em `/api/photos/...`; não são migrados automaticamente. Se existirem fotos reais nesse formato em produção, mantenha seu volume até migrá-las. Para uma instalação nova usando a Cloudflare, não é necessário volume de uploads no Railway.
+
+## Deploy no Railway
+
+O projeto [Pet Namora](https://railway.com/project/62ad03ed-6f4a-496a-943d-3de20daa9041) está conectado à branch `main` do GitHub. O build gera saída standalone. Configure PostgreSQL próprio, segredo JWT aleatório com pelo menos 32 caracteres, `APP_URL` HTTPS e `APP_HOST=0.0.0.0`. Use `npm run build`, `npm run db:migrate` como comando pré-deploy e `npm run start` para iniciar; configure o health check em `/api/health`. Para as fotos, use as variáveis Cloudflare acima. O banco, as sessões e os usuários continuam exclusivos do Pet Namora; não copie o `.env` inteiro de outro SaaS.

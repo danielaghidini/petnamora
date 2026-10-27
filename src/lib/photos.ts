@@ -1,4 +1,27 @@
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { uploadCloudflarePhoto } from "./cloudflare-images";
+import { HttpError } from "./http";
+
+export async function savePhoto(
+  bytes: Uint8Array,
+  extension: "jpg" | "png" | "webp",
+  ownerId: string,
+) {
+  const storage =
+    process.env.PHOTO_STORAGE ||
+    (process.env.NODE_ENV === "production" ? "cloudflare" : "local");
+  if (storage === "cloudflare")
+    return uploadCloudflarePhoto(bytes, extension, ownerId);
+  if (storage !== "local")
+    throw new HttpError("O envio de fotos ainda não está configurado.", 503);
+  const name = `${randomUUID()}.${extension}`;
+  await mkdir(uploadDirectory(), { recursive: true });
+  await writeFile(path.join(uploadDirectory(), name), bytes, { flag: "wx" });
+  return `/api/photos/${name}`;
+}
+
 export function uploadDirectory() {
   return path.resolve(
     process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads"),

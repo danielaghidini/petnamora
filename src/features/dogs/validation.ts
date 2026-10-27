@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isPhotoUrl } from "@/lib/photo-urls";
 export const dogSchema = z.object({
   name: z
     .string()
@@ -68,10 +69,7 @@ export const dogSchema = z.object({
     .max(1000, "A apresentação pode ter até 1.000 caracteres."),
   photoUrl: z
     .string()
-    .regex(
-      /^\/api\/photos\/[a-f0-9-]+\.(jpg|png|webp)$/,
-      "Envie uma foto do seu cachorro.",
-    ),
+    .refine(isPhotoUrl, "Envie uma foto do seu cachorro."),
   pedigree: z.boolean(),
   vaccinated: z.boolean(),
   healthTests: z.boolean(),
