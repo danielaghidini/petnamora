@@ -290,10 +290,6 @@ export function PetApp({
   }
   const shownDogs = tab === "likes" ? likedDogs : dogs;
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
-  const titles = {
-    matches: "Deu namorinho!",
-    dogs: "Sua turminha de quatro patas.",
-  };
 
   return (
     <div className="app-shell">
@@ -368,17 +364,15 @@ export function PetApp({
           </div>
         </header>
         <main className="main-content">
-          {(tab === "matches" || tab === "dogs") && (
+          {tab === "matches" && (
             <div className="page-heading">
               <div>
                 <div className="eyebrow">
                   <span /> TEM CORAÇÃO BATENDO POR AQUI
                 </div>
-                <h1>{titles[tab]}</h1>
+                <h1>Deu namorinho!</h1>
                 <p>
-                  {tab === "matches"
-                    ? "Os cachorros trocaram corações. Agora os humanos podem bater um papo!"
-                    : "Aqui mora sua turminha. Conte o jeitinho de cada cachorro."}
+                  Os cachorros trocaram corações. Agora os humanos podem bater um papo!
                 </p>
               </div>
               <span className="heading-doodle">
@@ -438,10 +432,10 @@ export function PetApp({
                 <PawPrint className="hero-paw" size={120} />
               </section>
               <form className="search-panel" onSubmit={filter}>
-                <div className="search-field">
-                  <Search size={18} />
-                  <label>
-                    <span>Qual raça você procura?</span>
+                <label className="search-field">
+                  <span>Qual raça você procura?</span>
+                  <span className="search-input">
+                    <Search size={18} aria-hidden="true" />
                     <input
                       value={filters.breed}
                       onChange={(event) =>
@@ -450,15 +444,15 @@ export function PetApp({
                           breed: event.target.value,
                         }))
                       }
-                      placeholder="Todas as raças"
+                      placeholder="Digite a raça"
                       maxLength={60}
                     />
-                  </label>
-                </div>
-                <div className="search-field location-field">
-                  <MapPin size={18} />
-                  <label>
-                    <span>Onde mora o crush?</span>
+                  </span>
+                </label>
+                <label className="search-field location-field">
+                  <span>Onde mora o crush?</span>
+                  <span className="search-input">
+                    <MapPin size={18} aria-hidden="true" />
                     <input
                       value={filters.city}
                       onChange={(event) =>
@@ -467,11 +461,11 @@ export function PetApp({
                           city: event.target.value,
                         }))
                       }
-                      placeholder="Todas as cidades"
+                      placeholder="Digite a cidade"
                       maxLength={80}
                     />
-                  </label>
-                </div>
+                  </span>
+                </label>
                 <button
                   type="button"
                   className={cn("filter-button", filtersOpen && "selected")}
@@ -616,42 +610,43 @@ export function PetApp({
                   <h3>
                     {tab === "likes"
                       ? "Nenhum coraçãozinho por aqui… ainda!"
-                      : "Cadê esse crush?"}
+                      : activeFilterCount > 0
+                        ? "Nenhum cachorro encontrado"
+                        : "Os primeiros namorinhos começam aqui"}
                   </h3>
                   <p>
                     {tab === "likes"
                       ? "Conheça os cachorros e mande o primeiro coração."
-                      : "Tente outra raça ou cidade. O próximo namorinho pode estar logo ali."}
+                      : activeFilterCount > 0
+                        ? "Tente outra raça ou cidade para ampliar a busca."
+                        : "Ainda não há outros cachorros disponíveis. Cadastre o seu e volte para conhecer quem chegar."}
                   </p>
                   <button
                     className="secondary-button"
                     onClick={() =>
                       tab === "likes"
                         ? void navigate("discover")
-                        : void clearFilters()
+                        : activeFilterCount > 0
+                          ? void clearFilters()
+                          : addDog()
                     }
                   >
                     {tab === "likes"
                       ? "Conhecer os cachorros"
-                      : "Ver todos os cachorros"}
+                      : activeFilterCount > 0
+                        ? "Ver todos os cachorros"
+                        : "Cadastrar meu cachorro"}
                   </button>
                 </div>
-              )}
-              {shownDogs.some((dog) => dog.demo) && (
-                <p className="demo-disclosure">
-                  Os cachorros marcados como exemplo estão aqui só pra você
-                  conhecer o app. Eles não recebem corações e não têm uma
-                  família cadastrada.
-                </p>
               )}
             </section>
           )}
           {tab === "dogs" && (
             <section>
               <div className="section-heading">
-                <h2>
+                <h1>
                   Meus cachorros <span>{myDogs.length}</span>
-                </h2>
+                </h1>
                 <button className="secondary-button" onClick={addDog}>
                   <Plus size={16} /> Adicionar cachorro
                 </button>
@@ -859,11 +854,7 @@ export function PetApp({
                 <span>Porte {detail.size.toLowerCase()}</span>
                 <span>{detail.sex === "MALE" ? "Macho" : "Fêmea"}</span>
               </div>
-              <p className="detail-bio">
-                {detail.demo
-                  ? "Esse fofinho está aqui só pra você conhecer o Pet Namora. A foto e as informações são de exemplo; ele não recebe corações nem combina encontros."
-                  : detail.bio}
-              </p>
+              <p className="detail-bio">{detail.bio}</p>
               <h4>O que a família contou</h4>
               <div className="detail-checks">
                 {[
@@ -881,15 +872,9 @@ export function PetApp({
                 Informações contadas pela família, sem verificação dos
                 documentos pelo Pet Namora.
               </p>
-              {detail.demo && (
-                <p className="demo-detail">
-                  Esse fofinho é só um exemplo e não recebe corações.
-                </p>
-              )}
               <button
                 className="primary-button"
                 disabled={
-                  detail.demo ||
                   likingId === detail.id ||
                   likedDogs.some((item) => item.id === detail.id)
                 }
@@ -997,7 +982,7 @@ export function PetApp({
           <p>
             Estamos dando as primeiras patinhas por aqui. Ainda não temos
             verificação de documentos, recuperação de senha, cobrança ou equipe
-            de moderação. Os cachorros de exemplo ficam sempre identificados.
+            de moderação.
           </p>
         </div>
       </Modal>

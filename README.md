@@ -13,7 +13,6 @@ npm install
 npm run db:local
 npm run db:generate
 npm run db:migrate
-npm run db:seed
 npm run dev
 ```
 
@@ -30,7 +29,7 @@ Abra http://localhost:3003. `db:local` cria `.env` com credenciais aleatórias, 
 - Denúncia persistente que oculta o perfil para o denunciante e bloqueia a conversa entre o par.
 - Layout responsivo com navegação móvel e diálogos acessíveis via Radix.
 
-O seed é opcional e idempotente. Seus seis perfis são **exemplos fictícios**, com fotos ilustrativas do Unsplash e sem conta acessível, curtidas ou conversas simuladas. A marcação é exibida em cada cartão. Quando existe outro cão real disponível, a busca do tutor deixa de mostrar exemplos.
+A instalação começa sem perfis, curtidas ou conversas. Todos os cães exibidos vêm de cadastros de tutores. Não há carga automática de dados fictícios. A migração `20261027200000_remove_demo_profiles` remove os antigos perfis marcados como demonstração e suas interações, preservando os cadastros reais.
 
 ## Estrutura
 
@@ -40,7 +39,7 @@ src/features/dogs/       regras, contratos, validação e componentes do produto
 src/components/ui/       elementos de interface reutilizáveis
 src/lib/                 autenticação, banco, HTTP, upload e utilitários
 prisma/                  modelo e migração inicial
-scripts/                 banco local e seed de exemplos
+scripts/                 banco local e execução standalone
 docs/                    análise de reaproveitamento e próximos módulos
 public/brand/            logo fornecida em ID/
 uploads/                 fotos locais, ignoradas pelo Git
@@ -53,8 +52,11 @@ No Windows, encerre o servidor antes de rodar o build: o Prisma Client mantém u
 ```powershell
 npm run typecheck
 npm run lint
+npm run test:migrations
 npm run build
 ```
+
+O teste de migração usa o PostgreSQL configurado em `DATABASE_URL`, cria cenários em schemas isolados e desfaz todas as alterações ao terminar. Confere a remoção dos dados fictícios e a preservação de perfis, contas e interações reais.
 
 ## Limites desta versão
 
@@ -83,4 +85,6 @@ Uploads locais existentes continuam em `/api/photos/...`; não são migrados aut
 
 ## Deploy no Railway
 
-O projeto [Pet Namora](https://railway.com/project/62ad03ed-6f4a-496a-943d-3de20daa9041) está conectado à branch `main` do GitHub. O build gera saída standalone. Configure PostgreSQL próprio, segredo JWT aleatório com pelo menos 32 caracteres, `APP_URL` HTTPS e `APP_HOST=0.0.0.0`. Use `npm run build`, `npm run db:migrate` como comando pré-deploy e `npm run start` para iniciar; configure o health check em `/api/health`. Para as fotos, use as variáveis Cloudflare acima. O banco, as sessões e os usuários continuam exclusivos do Pet Namora; não copie o `.env` inteiro de outro SaaS.
+O projeto [Pet Namora](https://railway.com/project/62ad03ed-6f4a-496a-943d-3de20daa9041) está conectado à branch `main` do GitHub. O serviço `Postgres` e seu volume persistente foram criados exclusivamente para este projeto. O serviço `petnamora` usa a referência privada `DATABASE_URL=${{Postgres.DATABASE_URL}}`, e o comando pré-deploy está configurado como `npm run db:migrate`. Nenhuma credencial do banco de produção é salva no repositório ou no `.env` local.
+
+O build gera saída standalone. Para concluir a configuração da aplicação, defina um segredo JWT aleatório com pelo menos 32 caracteres, `APP_URL` HTTPS e `APP_HOST=0.0.0.0`. Use `npm run build` e `npm run start`; configure o health check em `/api/health`. Para as fotos, use as variáveis Cloudflare acima. As migrações do deploy seguem o código publicado na `main`; alterações locais e da `develop` precisam ser incorporadas antes de chegar à produção. O banco, as sessões e os usuários continuam exclusivos do Pet Namora; não copie o `.env` inteiro de outro SaaS.

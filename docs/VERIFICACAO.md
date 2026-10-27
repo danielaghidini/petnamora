@@ -1,5 +1,26 @@
 # Verificação do MVP
 
+## PostgreSQL no Railway — 27/10/2026
+
+- Criado o serviço `Postgres` (`22441e6a-f3de-4bd4-a75f-f9c87ccd8ea1`) no ambiente `production` do projeto próprio Pet Namora, com volume persistente `postgres-volume`. O serviço ficou online.
+- Adicionada ao serviço `petnamora` a referência privada `DATABASE_URL=${{Postgres.DATABASE_URL}}`. Configurado `npm run db:migrate` como comando pré-deploy. Nenhuma credencial foi exposta nos arquivos locais nem foi utilizado banco de outro SaaS.
+- O deploy `aa7a1ce6-aa2d-499d-894f-78a5de80ad97`, baseado na `main`, compilou e executou a migração `20261027150000_initial` no banco `railway`, schema `public`, host privado `postgres.railway.internal:5432`. Os logs confirmaram “All migrations have been successfully applied.” e a inicialização do Next.js com “Ready in 42ms”.
+- A interface do banco exibiu as tabelas `_prisma_migrations`, `Dog`, `Like`, `Match`, `Message`, `Report`, `Session` e `User`. A consulta visual de `Dog` confirmou “This table is empty”. App e PostgreSQL ficaram online após a implantação.
+- A migração local de remoção do campo `demo` ainda depende de publicar seu código na `main`; ela não foi aplicada isoladamente ao banco de produção para manter compatibilidade com a versão que está rodando. Nenhum seed foi executado, e nenhum dado local foi copiado para o banco de produção.
+- A aplicação continua sem domínio público. A conclusão da publicação inclui as alterações locais, integração Cloudflare da `develop`, `JWT_SECRET`, `APP_URL`, `APP_HOST=0.0.0.0` e health check. O banco de produção está provisionado e conectado, sem significar que todo o fluxo público já foi homologado.
+
+## Remoção da demonstração — 27/10/2026
+
+- A migração `20261027200000_remove_demo_profiles` foi aplicada no banco local próprio, após backup em `.local/backups/`. Foram removidos seis perfis fictícios e a conta do antigo seed. O único perfil real e sua conta foram preservados; a comparação dos hashes dos registros antes e depois confirmou que não houve alterações nesses dados.
+- O seed e sua execução no iniciador Windows foram removidos. O modelo, a API e os componentes deixaram de usar o campo `demo`; uma instalação nova começa sem cadastros fictícios.
+- O formulário de cadastro não preenche idade, sexo, porte ou estado com valores presumidos. A busca sem resultados oferece uma mensagem e ação conforme haja filtros aplicados ou a comunidade ainda esteja vazia.
+- `npm run test:migrations`: dois cenários passaram em schemas isolados com rollback. A limpeza preservou perfis, sessões, curtidas, matches, mensagens e denúncias reais; removeu as interações fictícias por cascata; preservou a conta do antigo seed quando havia um perfil real vinculado a ela.
+- `npm run lint`, `npm run typecheck`, `npm run build` e `git diff --check` passaram. O health check, a página inicial e a busca responderam HTTP 200. A API retornou somente o perfil real, sem campo `demo`, IDs de exemplo ou fotos do Unsplash. Uma busca sem correspondência retornou uma lista vazia.
+- No navegador, a tela mostrou somente o cadastro real. A busca sem correspondência exibiu “Nenhum cachorro encontrado”; limpar a busca restaurou o perfil real. O servidor de desenvolvimento foi reiniciado em `http://localhost:3003`.
+- Esta alteração foi validada localmente. Não houve publicação nem migração do banco de produção nesta etapa. Os limites de lançamento descritos no README continuam pendentes.
+
+## Histórico anterior à remoção
+
 Executada em 27/10/2026 no banco próprio `petnamora`, porta 5437.
 
 ## História verificada

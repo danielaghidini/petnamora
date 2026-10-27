@@ -19,7 +19,6 @@ export const publicDogFields = {
   healthTests: true,
   neutered: true,
   active: true,
-  demo: true,
 } as const;
 
 export async function discover(params: URLSearchParams, userId?: string) {
@@ -36,16 +35,11 @@ export async function discover(params: URLSearchParams, userId?: string) {
   if (userId) {
     where.ownerId = { not: userId };
     where.reports = { none: { reporterId: userId } };
-    // Examples remain useful for a new installation, but never mix into a live community.
-    const liveCount = await db.dog.count({
-      where: { active: true, demo: false, ownerId: { not: userId } },
-    });
-    if (liveCount > 0) where.demo = false;
   }
   return db.dog.findMany({
     where,
     select: publicDogFields,
-    orderBy: [{ demo: "asc" }, { createdAt: "desc" }],
+    orderBy: { createdAt: "desc" },
     take: 60,
   });
 }
@@ -65,10 +59,6 @@ export async function likeDog(userId: string, fromId: string, toId: string) {
             throw new HttpError("Perfil não autorizado.", 403);
           if (!to || !to.active)
             throw new HttpError("Perfil indisponível.", 404);
-          if (from.demo || to.demo)
-            throw new HttpError(
-              "Esse fofinho é só um exemplo. Os corações só valem entre cachorros cadastrados de verdade.",
-            );
           if (to.ownerId === userId || from.sex === to.sex)
             throw new HttpError(
               "Para esse namorinho, escolha um cachorro do sexo oposto e de outra família.",
