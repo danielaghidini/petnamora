@@ -1,5 +1,5 @@
 "use client";
-import { ArrowUpRight, Heart, MapPin, BadgeCheck } from "lucide-react";
+import { ArrowUpRight, Heart, MapPin, BadgeCheck, LoaderCircle, MessageCircle } from "lucide-react";
 import type { DogProfile } from "./types";
 import { ageLabel } from "./types";
 export function DogCard({
@@ -8,12 +8,18 @@ export function DogCard({
   onLike,
   onOpen,
   busy,
+  onMessage,
+  messageBusy,
+  messageDisabled,
 }: {
   dog: DogProfile;
   liked: boolean;
   onLike: () => void;
   onOpen: () => void;
   busy?: boolean;
+  onMessage?: () => void;
+  messageBusy?: boolean;
+  messageDisabled?: boolean;
 }) {
   return (
     <article className="dog-card">
@@ -74,6 +80,13 @@ export function DogCard({
           )}
           {!dog.pedigree && !dog.vaccinated && <span>Conheça esse amor</span>}
         </div>
+        {onMessage && (
+          <button type="button" className="secondary-button dog-message-button" onClick={onMessage}
+            disabled={messageBusy || messageDisabled} aria-label={`Mandar mensagem para a família de ${dog.name}`}>
+            {messageBusy ? <LoaderCircle size={17} className="spin" /> : <MessageCircle size={17} />}
+            {messageBusy ? "Abrindo conversa…" : "Mandar mensagem"}
+          </button>
+        )}
       </div>
     </article>
   );

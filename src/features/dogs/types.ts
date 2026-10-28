@@ -23,6 +23,7 @@ export type DiscoverPage = {
 export type Viewer = { id: string; name: string; email: string; isAdmin: boolean };
 export type MatchProfile = {
   id: string;
+  isMatch: boolean;
   dogA: DogProfile;
   dogB: DogProfile;
   messages: { text: string; createdAt: string }[];

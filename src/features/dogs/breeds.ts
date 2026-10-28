@@ -67,6 +67,20 @@ export function breedNames(breeds: readonly string[]) {
   return breeds.flatMap((breed) => [breed, ...(BREED_ALIASES[breed] ?? [])]);
 }
 
+function normalizeBreed(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+export function matchingBreed(value: string) {
+  const normalized = normalizeBreed(value);
+  return DOG_BREEDS.find((breed) => breedNames([breed]).some((name) => normalizeBreed(name) === normalized));
+}
+
+export function searchBreeds(query: string) {
+  const normalized = normalizeBreed(query);
+  return DOG_BREEDS.filter((breed) => breedNames([breed]).some((name) => normalizeBreed(name).includes(normalized)));
+}
+
 export function breedLabel(breed: string) {
   return breed === OTHER_BREED ? "Outros" : breed;
 }

@@ -67,14 +67,13 @@ export function Chat({
   return (
     <div className="chat">
       <p className="chat-note">
-        <LockKeyhole size={13} /> Esse papo é só entre os responsáveis pelo
-        namorinho.
+        <LockKeyhole size={13} /> Esse papo é só entre as duas famílias.
       </p>
       <div className="chat-messages" aria-live="polite">
         {!messages.length && (
           <div className="chat-empty">
             <MessageCircle size={35} />
-            <h3>Deu namorinho. Mande um oizinho!</h3>
+            <h3>{match.isMatch ? "Deu namorinho. Mande um oizinho!" : "Que tal mandar o primeiro oi?"}</h3>
             <p>
               Que tal contar o jeitinho do seu cachorro? Conversem também sobre
               saúde e cuidados.

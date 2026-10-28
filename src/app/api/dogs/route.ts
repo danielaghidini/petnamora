@@ -28,6 +28,8 @@ export async function POST(request: Request) {
     checkOrigin(request);
     const user = await requireUser();
     const input = dogSchema.parse(await request.json());
+    if (input.neutered === true)
+      throw new HttpError("O cadastro é destinado a cachorros disponíveis para cruzamento.");
     if ((await db.dog.count({ where: { ownerId: user.id } })) >= 5)
       throw new HttpError("Sua turminha pode ter até 5 cachorros por aqui.");
     const dog = await db.dog.create({
@@ -49,7 +51,8 @@ export async function PATCH(request: Request) {
       where: { id: body.id, ownerId: user.id },
     });
     if (!existing) throw new HttpError("Perfil não encontrado.", 404);
-    const input = dogSchema.parse(body);
+    // The retired field must never re-enable an existing neutered profile.
+    const input = dogSchema.omit({ neutered: true }).parse(body);
     const dog = await db.dog.update({
       where: { id: existing.id },
       data: input,

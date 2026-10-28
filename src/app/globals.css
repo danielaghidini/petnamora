@@ -419,6 +419,7 @@ p {
   font-weight: 750;
 }
 .sidebar-user > button:not(.icon-button) {
+  flex: 1;
   padding: 0;
   text-align: left;
   min-width: 0;
@@ -426,7 +427,7 @@ p {
 .sidebar-user strong {
   font-size: var(--font-size-body);
   display: block;
-  max-width: 168px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -437,8 +438,21 @@ p {
   display: block;
   margin-top: 4px;
 }
-.sidebar-user .icon-button {
-  padding: 1px;
+.sidebar-user .sidebar-logout {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--pink) 35%, var(--line));
+  border-radius: 10px;
+  background: var(--pink-soft);
+  color: var(--pink-dark);
+}
+.sidebar-user .sidebar-logout:hover {
+  border-color: var(--pink);
+  background: var(--pink);
+  color: #fff;
 }
 .main-shell {
   margin-left: 280px;
@@ -1488,6 +1502,19 @@ h1 {
   font-weight: 500;
   line-height: 1.5;
 }
+.dog-message-button {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 14px;
+  align-items: center;
+  font-size: var(--font-size-caption);
+}
+.conversation-kind {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-accent);
+  font-size: var(--font-size-badge);
+}
 .dog-tags > .health-tag {
   color: var(--success-text);
   background: var(--success-surface);
@@ -1747,7 +1774,8 @@ h1 {
   gap: 16px;
 }
 .stack-form > label:not(.check-label):not(.photo-upload),
-.form-grid > label {
+.form-grid > label,
+.form-grid > .form-field {
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -1838,6 +1866,149 @@ h1 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+.dog-form > label:not(.check-label):not(.photo-upload),
+.dog-form .form-grid > label,
+.dog-form .form-field > label {
+  font-size: var(--font-size-caption);
+}
+.dog-form input:not([type="checkbox"]):not([type="file"]):not([type="hidden"]),
+.dog-form textarea,
+.dog-form .select-trigger {
+  min-height: 48px;
+  border-color: color-mix(in srgb, var(--text-secondary) 65%, var(--line));
+  border-radius: 7px;
+  padding: 10px 12px;
+}
+.dog-form input:not([type="checkbox"]):not([type="file"]):hover,
+.dog-form textarea:hover {
+  border-color: var(--text-secondary);
+}
+.dog-form input:not([type="checkbox"]):not([type="file"]):focus,
+.dog-form textarea:focus,
+.breed-picker-search:focus {
+  border-color: var(--pink);
+  outline: 2px solid var(--pink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--pink-soft);
+}
+.dog-form input::placeholder,
+.dog-form textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+.dog-form .select-trigger[aria-invalid="true"] {
+  border-color: var(--error-text);
+}
+.dog-form .photo-upload {
+  border-style: solid;
+  background: var(--surface-input);
+}
+.dog-form .photo-upload:hover {
+  border-color: var(--text-secondary);
+}
+.dog-form .health-fields .check-label {
+  align-items: flex-start;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  padding: 12px;
+  background: var(--surface-input);
+  font-size: var(--font-size-caption);
+  line-height: 1.5;
+}
+.dog-form .health-fields input {
+  margin-top: 1px;
+}
+.dog-form .health-fields .check-label:has(:checked) {
+  border-color: color-mix(in srgb, var(--pink) 45%, var(--line));
+  background: var(--pink-soft);
+}
+.dog-form .health-fields .check-label:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+.breed-picker-trigger {
+  justify-content: flex-start;
+}
+.breed-picker-trigger > svg {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+.breed-picker-trigger > span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.breed-picker-panel {
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  width: var(--radix-popover-trigger-width);
+  min-width: 250px;
+  max-width: calc(100vw - 24px);
+  max-height: min(420px, var(--radix-popover-content-available-height));
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 12px 30px #21152f26;
+  overflow: hidden;
+}
+.breed-picker-search {
+  flex-shrink: 0;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, var(--text-secondary) 65%, var(--line));
+  border-radius: 7px;
+  padding: 9px 12px;
+  background: var(--surface-input);
+  color: var(--ink);
+  font-size: var(--font-size-body);
+}
+.breed-picker-search::placeholder {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+.breed-picker-options {
+  min-height: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.breed-picker-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 6px;
+  padding: 10px;
+  color: var(--ink);
+  font-size: var(--font-size-body);
+  text-align: left;
+}
+.breed-picker-option > svg {
+  flex-shrink: 0;
+  color: var(--pink);
+}
+.breed-picker-option[aria-selected="true"] {
+  background: var(--pink-soft);
+}
+.breed-picker-option[data-highlighted] {
+  background: var(--lilac);
+}
+.breed-picker-option small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+}
+.breed-picker-panel .breed-filter-actions {
+  flex-shrink: 0;
+}
+.breed-other-label {
+  margin-top: 5px;
 }
 .photo-upload {
   display: flex;

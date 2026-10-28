@@ -21,12 +21,13 @@ Abra http://localhost:3003. `db:local` cria `.env` com credenciais aleatórias, 
 ## O que funciona
 
 - Cadastro e login do tutor, senha com bcrypt, sessão revogável no banco e cookie HttpOnly.
-- Cadastro e edição de até cinco cães por tutor, foto JPG/PNG/WebP, raça, sexo, idade em meses, porte, cidade/UF, descrição e informações de saúde declaradas.
+- Cadastro e edição de até cinco cães por tutor, foto JPG/PNG/WebP, raça em lista pesquisável com opção “Outros”, sexo, idade em meses, porte, cidade/UF, descrição e informações de saúde declaradas. Nomes de raças já cadastrados são preservados na edição.
 - Fotos no Cloudflare Images em produção, com entrega pela CDN; armazenamento local para desenvolvimento.
 - Busca por cidade e múltiplas raças, com lista pesquisável e opção “Outros” para raças fora da lista; filtros por sexo, porte e pedigree declarado. Descobrir carrega 12 perfis por vez, com botão “Ver mais cachorros” que preserva a busca aplicada.
 - Modo crush no menu superior: um perfil por vez, com arraste à esquerda para passar e à direita para curtir, botões e setas do teclado. Reutiliza os filtros e carrega os próximos perfis automaticamente. As curtidas seguem as regras do aplicativo; passar um perfil vale apenas para a rodada atual.
 - Curtidas entre cães ativos, não castrados, de sexos opostos e tutores diferentes; match somente com reciprocidade.
-- Chat persistente exclusivo dos tutores do match; atualização por polling a cada cinco segundos enquanto a página está visível, com as 100 mensagens mais recentes.
+- Conversa direta pela lista normal do Descobrir, sem curtidas ou match. O botão “Mandar mensagem” abre um papo entre as famílias; a conversa aparece na caixa de papos após a primeira mensagem. No Modo crush, a troca de corações continua formando o namorinho.
+- Chat persistente exclusivo das duas famílias; atualização por polling a cada cinco segundos enquanto a página está visível, com as 100 mensagens mais recentes. Denúncias, bloqueios e suspensões impedem o contato nos dois tipos de conversa.
 - Denúncia persistente que oculta o perfil para o denunciante e bloqueia a conversa entre o par.
 - Layout responsivo com navegação móvel e diálogos acessíveis via Radix.
 

@@ -306,6 +306,107 @@ test("admin permissions, moderation and audit through HTTP", { timeout: 120000 }
       assert.deepEqual((await allPages(["Shih-tzu"])).map((dog) => dog.breed), ["Shih Tzu"]);
       assert.equal((await allPages([])).length, 33);
     });
+    await t.test("registration omits the retired neutered field and edits preserve legacy restrictions", async () => {
+      const owner = await db.user.create({
+        data: { name: "Registration test", email: "registration@admin-verification.invalid", passwordHash },
+      });
+      const cookie = await login(owner.email);
+      const profile = { ...dogInput };
+      delete profile.neutered;
+      const created = await request("/api/dogs", { cookie, body: profile });
+      assert.equal(created.status, 201);
+      const normal = (await created.json()).dog;
+      assert.equal(normal.neutered, false);
+      assert.equal((await request("/api/dogs", { cookie, body: { ...profile, neutered: true } })).status, 400);
+      assert.equal(await db.dog.count({ where: { ownerId: owner.id } }), 1);
+
+      const legacy = await db.dog.create({ data: { ...dogInput, ownerId: owner.id, neutered: true } });
+      for (const change of [{}, { neutered: false }]) {
+        const response = await request("/api/dogs", { cookie, method: "PATCH", body: { ...profile, id: legacy.id, name: "Nome atualizado", ...change } });
+        assert.equal(response.status, 200);
+        const updated = (await response.json()).dog;
+        assert.equal(updated.name, "Nome atualizado");
+        assert.equal(updated.neutered, true);
+      }
+      const edited = await request("/api/dogs", { cookie, method: "PATCH", body: { ...profile, id: normal.id, neutered: true } });
+      assert.equal(edited.status, 200);
+      assert.equal((await edited.json()).dog.neutered, false);
+    });
+    await t.test("direct chats require no likes, reuse the same thread and preserve messages when a match follows", async () => {
+      const [sender, recipient] = await Promise.all(["sender", "recipient"].map((name) => db.user.create({
+        data: { name, email: `${name}@direct-verification.invalid`, passwordHash },
+      })));
+      const [from, to] = await Promise.all([
+        db.dog.create({ data: { ...dogInput, ownerId: sender.id, sex: "MALE" } }),
+        db.dog.create({ data: { ...dogInput, ownerId: recipient.id } }),
+      ]);
+      const [senderCookie, recipientCookie] = await Promise.all([login(sender.email), login(recipient.email)]);
+      const pair = { fromId: from.id, toId: to.id };
+      const matchCount = await db.match.count({ where: { isMatch: true } });
+      assert.equal((await request("/api/matches", { body: pair })).status, 401);
+      assert.equal((await request("/api/matches", { cookie: senderCookie, body: pair, requestOrigin: "https://other.invalid" })).status, 403);
+      assert.equal((await request("/api/matches", { cookie: senderCookie, body: { fromId: to.id, toId: from.id } })).status, 403);
+      assert.equal((await request("/api/matches", { cookie: senderCookie, body: { toId: to.id } })).status, 400);
+      const opened = await request("/api/matches", { cookie: senderCookie, body: pair });
+      assert.equal(opened.status, 200);
+      const { match } = await opened.json();
+      assert.equal(match.isMatch, false);
+      assert.equal(await db.match.count({ where: { isMatch: true } }), matchCount);
+      assert.equal(await db.like.count({ where: { fromId: from.id } }), 0);
+      assert.deepEqual((await (await request("/api/matches", { cookie: recipientCookie })).json()).matches, []);
+      assert.equal((await request("/api/messages", { cookie: senderCookie, body: { matchId: match.id, text: "Oi! Gostaria de conhecer melhor seu cachorro." } })).status, 201);
+      const received = await (await request(`/api/messages?matchId=${match.id}`, { cookie: recipientCookie })).json();
+      assert.equal(received.messages[0].text, "Oi! Gostaria de conhecer melhor seu cachorro.");
+      assert.equal((await request("/api/messages", { cookie: recipientCookie, body: { matchId: match.id, text: "Oi! Vamos conversar." } })).status, 201);
+      assert.equal((await request(`/api/messages?matchId=${match.id}`, { cookie: firstCookie })).status, 404);
+      assert.equal((await request("/api/messages", { cookie: firstCookie, body: { matchId: match.id, text: "Acesso indevido" } })).status, 404);
+      const inbox = (await (await request("/api/matches", { cookie: recipientCookie })).json()).matches;
+      assert.equal(inbox.length, 1);
+      assert.equal(inbox[0].isMatch, false);
+      const duplicate = await Promise.all(Array.from({ length: 3 }, () => request("/api/matches", { cookie: recipientCookie, body: { fromId: to.id, toId: from.id } })));
+      for (const response of duplicate) {
+        assert.equal(response.status, 200);
+        assert.equal((await response.json()).match.id, match.id);
+      }
+      assert.equal(await db.match.count({ where: { OR: [{ dogAId: from.id }, { dogBId: from.id }] } }), 1);
+      assert.equal((await (await request("/api/likes", { cookie: senderCookie, body: pair })).json()).matched, false);
+      assert.equal((await db.match.findUnique({ where: { id: match.id } })).isMatch, false);
+      const reciprocal = await (await request("/api/likes", { cookie: recipientCookie, body: { fromId: to.id, toId: from.id } })).json();
+      assert.equal(reciprocal.matched, true);
+      assert.equal(reciprocal.matchId, match.id);
+      assert.equal((await db.match.findUnique({ where: { id: match.id } })).isMatch, true);
+      assert.equal(await db.message.count({ where: { matchId: match.id } }), 2);
+      assert.equal((await (await request("/api/matches", { cookie: senderCookie, body: pair })).json()).match.isMatch, true);
+    });
+    await t.test("direct chats keep ownership, moderation and mutual report protections", async () => {
+      const [sender, recipient] = await Promise.all(["blocked-sender", "blocked-recipient"].map((name) => db.user.create({
+        data: { name, email: `${name}@direct-verification.invalid`, passwordHash },
+      })));
+      const [from, to] = await Promise.all([
+        db.dog.create({ data: { ...dogInput, ownerId: sender.id } }),
+        db.dog.create({ data: { ...dogInput, ownerId: recipient.id } }),
+      ]);
+      const [senderCookie, recipientCookie] = await Promise.all([login(sender.email), login(recipient.email)]);
+      const pair = { fromId: from.id, toId: to.id };
+      const opened = await request("/api/matches", { cookie: senderCookie, body: pair });
+      assert.equal(opened.status, 200); // Talking does not require an opposite-sex match.
+      const { match } = await opened.json();
+      assert.equal((await request("/api/messages", { cookie: senderCookie, body: { matchId: match.id, text: "Primeiro contato" } })).status, 201);
+      assert.equal((await request("/api/reports", { cookie: recipientCookie, body: { dogId: from.id, reason: "Não desejo contato com este perfil" } })).status, 200);
+      for (const cookie of [senderCookie, recipientCookie]) {
+        assert.deepEqual((await (await request("/api/matches", { cookie })).json()).matches, []);
+        assert.equal((await request(`/api/messages?matchId=${match.id}`, { cookie })).status, 403);
+        assert.equal((await request("/api/messages", { cookie, body: { matchId: match.id, text: "Contato bloqueado" } })).status, 403);
+      }
+      assert.equal((await request("/api/matches", { cookie: senderCookie, body: pair })).status, 403);
+      await db.report.updateMany({ where: { reporterId: recipient.id, dogId: from.id }, data: { status: "RESOLVED" } });
+      assert.equal((await request("/api/matches", { cookie: senderCookie, body: pair })).status, 403);
+      const blocked = await db.dog.create({ data: { ...dogInput, ownerId: recipient.id, blockedAt: new Date() } });
+      assert.equal((await request("/api/matches", { cookie: senderCookie, body: { ...pair, toId: blocked.id } })).status, 404);
+      assert.equal((await request("/api/matches", { cookie: senderCookie, body: { ...pair, toId: from.id } })).status, 400);
+      await db.user.update({ where: { id: recipient.id }, data: { suspendedAt: new Date() } });
+      assert.equal((await request("/api/matches", { cookie: senderCookie, body: pair })).status, 404);
+    });
   } finally {
     if (server && server.exitCode === null) {
       const exited = once(server, "exit");

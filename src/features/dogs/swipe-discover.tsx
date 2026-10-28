@@ -144,7 +144,7 @@ export function SwipeDiscover({
         <span className="swipe-counter">{reviewed.size} {reviewed.size === 1 ? "perfil visto" : "perfis vistos"}</span>
       </div>
       {unavailable && <div className="swipe-unavailable">
-        <p>O perfil de {activeDog.name} está indisponível para namorinho. Escolha um cachorro ativo e não castrado para curtir.</p>
+        <p>O perfil de {activeDog.name} está indisponível para namorinho. Escolha outro cachorro para enviar um coração.</p>
         <button className="text-button" onClick={onManageDogs}>Ver meus cachorros</button>
       </div>}
       <div className="swipe-stage" aria-busy={busy || sending || loadingMore}>
