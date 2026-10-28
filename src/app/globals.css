@@ -1052,11 +1052,14 @@ h1 {
   box-shadow: var(--modal-shadow);
   animation: fade-in 0.18s ease-out;
 }
-.modal:has(.auth-emblem) {
+.modal:has(.auth-logo) {
   max-width: 520px;
 }
 .modal-wide {
   max-width: 690px;
+}
+.modal:has(.dog-detail) {
+  max-width: 800px;
 }
 .modal-heading {
   display: flex;
@@ -1189,14 +1192,11 @@ h1 {
   line-height: 1.7;
   color: var(--text-secondary);
 }
-.auth-emblem {
-  display: grid;
-  place-items: center;
-  background: var(--pink-soft);
-  border-radius: 18px;
-  width: 60px;
-  height: 60px;
-  color: var(--pink);
+.auth-logo {
+  display: block;
+  width: 240px;
+  max-width: 100%;
+  height: auto;
   margin: 0 auto;
 }
 .segmented {

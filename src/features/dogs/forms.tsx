@@ -1,6 +1,6 @@
 "use client";
 import { useState, type FormEvent } from "react";
-import { Camera, Heart, LoaderCircle } from "lucide-react";
+import { Camera, LoaderCircle } from "lucide-react";
 import { api } from "@/lib/client";
 import type { DogProfile, Viewer } from "./types";
 
@@ -36,9 +36,13 @@ export function AuthForm({
   }
   return (
     <form onSubmit={submit} className="stack-form">
-      <div className="auth-emblem">
-        <Heart size={28} fill="currentColor" />
-      </div>
+      <img
+        className="auth-logo"
+        src="/brand/petnamora-logo-02.png"
+        alt="Pet Namora"
+        width={2172}
+        height={724}
+      />
       <p className="form-intro">
         Um cadastro rapidinho pro seu cachorro encontrar um crush.
       </p>
