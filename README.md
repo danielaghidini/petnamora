@@ -23,13 +23,23 @@ Abra http://localhost:3003. `db:local` cria `.env` com credenciais aleatórias, 
 - Cadastro e login do tutor, senha com bcrypt, sessão revogável no banco e cookie HttpOnly.
 - Cadastro e edição de até cinco cães por tutor, foto JPG/PNG/WebP, raça, sexo, idade em meses, porte, cidade/UF, descrição e informações de saúde declaradas.
 - Fotos no Cloudflare Images em produção, com entrega pela CDN; armazenamento local para desenvolvimento.
-- Busca por raça e cidade; filtros por sexo, porte e pedigree declarado.
+- Busca por cidade e múltiplas raças, com lista pesquisável e opção “Outros” para raças fora da lista; filtros por sexo, porte e pedigree declarado. Descobrir carrega 12 perfis por vez, com botão “Ver mais cachorros” que preserva a busca aplicada.
 - Curtidas entre cães ativos, não castrados, de sexos opostos e tutores diferentes; match somente com reciprocidade.
 - Chat persistente exclusivo dos tutores do match; atualização por polling a cada cinco segundos enquanto a página está visível, com as 100 mensagens mais recentes.
 - Denúncia persistente que oculta o perfil para o denunciante e bloqueia a conversa entre o par.
 - Layout responsivo com navegação móvel e diálogos acessíveis via Radix.
 
-A instalação começa sem perfis, curtidas ou conversas. Todos os cães exibidos vêm de cadastros de tutores. Não há carga automática de dados fictícios. A migração `20261027200000_remove_demo_profiles` remove os antigos perfis marcados como demonstração e suas interações, preservando os cadastros reais.
+A instalação começa sem perfis, curtidas ou conversas. Não há carga automática de dados fictícios. A migração `20261027200000_remove_demo_profiles` remove os antigos perfis marcados como demonstração e suas interações, preservando os cadastros reais.
+
+## Carga opcional de perfis
+
+`npm run seed:profiles -- --url=https://petnamora.com.br` cadastra explicitamente 50 tutores fictícios e 50 cachorros pelos endpoints normais do site, sem deploy ou acesso direto ao banco. Para outro ambiente, informe sua origem em `--url`. `npm run seed:profiles -- --dry-run` apenas mostra o conteúdo planejado, sem requisições nem gravações.
+
+Os perfis têm nomes e biografias naturais, dez raças, ambos os sexos, três portes, idades adultas e cidades brasileiras. E-mails usam o domínio reservado `example.com`. As fotos ilustrativas vêm das galerias por raça da [Dog API](https://dog.ceo/dog-api/documentation/breed) e passam pelo upload da aplicação, inclusive Cloudflare em produção. A carga não cria curtidas, matches ou mensagens.
+
+As senhas aleatórias, os IDs e as fontes das fotos ficam em `.local/profile-seeds/<host>/accounts.json`, ignorado pelo Git. Preserve esse arquivo para entrar nas contas e retomar uma carga interrompida sem duplicar registros. Contas existentes só são acessadas quando a senha do manifesto corresponde; seus perfis não são sobrescritos. Nunca publique o manifesto.
+
+No mesmo diretório, `remove.sql` contém a remoção dos IDs criados para execução manual no banco correspondente. O SQL preserva tutores que passaram a ter outros cachorros; as interações dos perfis removidos seguem os cascades existentes. Fotos enviadas à Cloudflare não são apagadas pelo SQL; as URLs e as fontes ficam no manifesto para limpeza posterior.
 
 ## Administração
 
@@ -78,7 +88,7 @@ O teste de migração usa o PostgreSQL configurado em `DATABASE_URL`, cria cená
 
 ## Limites desta versão
 
-Sem cobrança, recuperação de senha, verificação de e-mail, verificação documental, notificações e geolocalização por raio. Saúde e pedigree são autodeclarados, sem selo de certificação. O app não avalia aptidão veterinária para reprodução. Busca limitada aos 60 resultados mais recentes; curtidas e conexões, a 100 registros.
+Sem cobrança, recuperação de senha, verificação de e-mail, verificação documental, notificações e geolocalização por raio. Saúde e pedigree são autodeclarados, sem selo de certificação. O app não avalia aptidão veterinária para reprodução. Curtidas e conexões são limitadas a 100 registros.
 
 O limitador de login é por e-mail e processo; substitua por proteção compartilhada por conta/IP antes de escalar ou abrir ao público. A validação de upload confere assinatura binária e tamanho e deve evoluir para decodificação/normalização e cotas. As sessões expiradas e fotos órfãs (inclusive uploads abandonados na Cloudflare) precisam de limpeza periódica. Defina política de privacidade, exclusão/exportação de dados e uma rotina de análise de denúncias antes de lançamento público.
 

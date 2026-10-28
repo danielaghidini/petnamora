@@ -16,6 +16,10 @@ export type DogProfile = {
   neutered: boolean;
   active: boolean;
 };
+export type DiscoverPage = {
+  dogs: DogProfile[];
+  nextCursor: string | null;
+};
 export type Viewer = { id: string; name: string; email: string; isAdmin: boolean };
 export type MatchProfile = {
   id: string;
