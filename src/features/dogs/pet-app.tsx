@@ -1,5 +1,5 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -25,8 +25,10 @@ import { cn } from "@/lib/utils";
 import { AuthForm, DogForm } from "./forms";
 import { DogCard } from "./dog-card";
 import { Chat } from "./chat";
+import { BreedFilter } from "./breed-filter";
 import {
   ageLabel,
+  type DiscoverPage,
   type DogProfile,
   type MatchProfile,
   type Viewer,
@@ -34,14 +36,14 @@ import {
 
 type Tab = "discover" | "likes" | "matches" | "dogs";
 type Filters = {
-  breed: string;
+  breeds: string[];
   city: string;
   sex: string;
   size: string;
   pedigree: boolean;
 };
 const emptyFilters: Filters = {
-  breed: "",
+  breeds: [],
   city: "",
   sex: "",
   size: "",
@@ -55,18 +57,24 @@ const navigation = [
 ] as const;
 
 export function PetApp({
-  initialDogs,
+  initialDiscovery,
   initialUser,
   initialMyDogs,
   initialLikedDogs,
 }: {
-  initialDogs: DogProfile[];
+  initialDiscovery: DiscoverPage;
   initialUser: Viewer | null;
   initialMyDogs: DogProfile[];
   initialLikedDogs: DogProfile[];
 }) {
   const [user, setUser] = useState(initialUser);
-  const [dogs, setDogs] = useState(initialDogs);
+  const [dogs, setDogs] = useState(initialDiscovery.dogs);
+  const [nextCursor, setNextCursor] = useState(initialDiscovery.nextCursor);
+  const [appliedFilters, setAppliedFilters] = useState<Filters>(emptyFilters);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState("");
+  const discoverRequest = useRef(0);
+  const moreInFlight = useRef(false);
   const [myDogs, setMyDogs] = useState(initialMyDogs);
   const [activeDogId, setActiveDogId] = useState(initialMyDogs[0]?.id || "");
   const [tab, setTab] = useState<Tab>("discover");
@@ -86,12 +94,54 @@ export function PetApp({
   const [busy, setBusy] = useState(false);
   const [likingId, setLikingId] = useState("");
 
-  async function loadDiscover(nextFilters = filters) {
+  function discoverParams(nextFilters: Filters) {
     const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(nextFilters))
+    const { breeds, ...otherFilters } = nextFilters;
+    for (const breed of breeds) params.append("breeds", breed);
+    for (const [key, value] of Object.entries(otherFilters))
       if (value) params.set(key, String(value));
-    const result = await api<{ dogs: DogProfile[] }>(`/api/dogs?${params}`);
-    setDogs(result.dogs);
+    return params;
+  }
+  async function loadDiscover(nextFilters = appliedFilters) {
+    const requestId = ++discoverRequest.current;
+    moreInFlight.current = true;
+    setLoadingMore(false);
+    setLoadMoreError("");
+    try {
+      const result = await api<DiscoverPage>(`/api/dogs?${discoverParams(nextFilters)}`);
+      if (requestId !== discoverRequest.current) return;
+      setDogs(result.dogs);
+      setNextCursor(result.nextCursor);
+      setAppliedFilters(nextFilters);
+    } finally {
+      if (requestId === discoverRequest.current) moreInFlight.current = false;
+    }
+  }
+  async function loadMore() {
+    if (!nextCursor || busy || moreInFlight.current) return;
+    const requestId = discoverRequest.current;
+    moreInFlight.current = true;
+    setLoadingMore(true);
+    setLoadMoreError("");
+    const params = discoverParams(appliedFilters);
+    params.set("cursor", nextCursor);
+    try {
+      const result = await api<DiscoverPage>(`/api/dogs?${params}`);
+      if (requestId !== discoverRequest.current) return;
+      setDogs((previous) => {
+        const ids = new Set(previous.map((dog) => dog.id));
+        return [...previous, ...result.dogs.filter((dog) => !ids.has(dog.id))];
+      });
+      setNextCursor(result.nextCursor);
+    } catch (error) {
+      if (requestId === discoverRequest.current)
+        setLoadMoreError((error as Error).message);
+    } finally {
+      if (requestId === discoverRequest.current) {
+        moreInFlight.current = false;
+        setLoadingMore(false);
+      }
+    }
   }
   async function navigate(next: Tab) {
     if (next !== "discover" && !user) {
@@ -143,9 +193,9 @@ export function PetApp({
         : `Que bom te ver, ${viewer.name.split(" ")[0]}!`,
     );
     try {
-      const [mine, available] = await Promise.all([
+      const [mine] = await Promise.all([
         api<{ dogs: DogProfile[] }>("/api/dogs?mine=true"),
-        api<{ dogs: DogProfile[] }>("/api/dogs"),
+        loadDiscover(),
       ]);
       const firstDogId = mine.dogs[0]?.id || "";
       const liked = firstDogId
@@ -156,7 +206,6 @@ export function PetApp({
       setMyDogs(mine.dogs);
       setActiveDogId(firstDogId);
       setLikedDogs(liked.dogs);
-      setDogs(available.dogs);
       if (!mine.dogs.length) {
         setEditingDog(undefined);
         setDogFormOpen(true);
@@ -238,7 +287,7 @@ export function PetApp({
     setBusy(true);
     setError("");
     try {
-      await loadDiscover();
+      await loadDiscover(filters);
       setFiltersOpen(false);
     } catch (error) {
       setError((error as Error).message);
@@ -289,7 +338,8 @@ export function PetApp({
     }
   }
   const shownDogs = tab === "likes" ? likedDogs : dogs;
-  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const activeFilterCount = appliedFilters.breeds.length +
+    [appliedFilters.city, appliedFilters.sex, appliedFilters.size, appliedFilters.pedigree].filter(Boolean).length;
 
   return (
     <div className="app-shell">
@@ -356,11 +406,9 @@ export function PetApp({
       </aside>
       <div className="main-shell">
         <header className="topbar">
-          <div className="breadcrumb">
-            <span>Seu próximo namorinho</span>
-            <span>/</span>
-            <strong>{navigation.find((item) => item.id === tab)?.label}</strong>
-          </div>
+          <Link href="/" className="mobile-brand" aria-label="Pet Namora, início">
+            <img src="/icon.svg" alt="Pet Namora" width={44} height={44} />
+          </Link>
           <div className="topbar-right">
             {user?.isAdmin && (
               <Link href="/admin" className="icon-button" aria-label="Abrir administração">
@@ -368,8 +416,10 @@ export function PetApp({
               </Link>
             )}
             <ThemeSelector />
-            <button className="primary-button topbar-cta" onClick={addDog}>
-              <Plus size={17} /> Cadastrar meu cachorro
+            <button className="primary-button topbar-cta" onClick={addDog} aria-label="Cadastrar meu cachorro">
+              <Plus size={17} />
+              <span className="topbar-cta-label">Cadastrar meu cachorro</span>
+              <span className="topbar-cta-short-label" aria-hidden="true">Cadastrar</span>
             </button>
           </div>
         </header>
@@ -421,7 +471,7 @@ export function PetApp({
               <section className="hero-banner">
                 <div className="hero-copy">
                   <h2>
-                    Um namorinho de quatro patas.
+                    Todo focinho merece um chamego.
                     <br />
                     <span>Muito amor pra dar e receber.</span>
                   </h2>
@@ -442,23 +492,10 @@ export function PetApp({
                 <PawPrint className="hero-paw" size={120} />
               </section>
               <form className="search-panel" onSubmit={filter}>
-                <label className="search-field">
-                  <span>Qual raça você procura?</span>
-                  <span className="search-input">
-                    <Search size={18} aria-hidden="true" />
-                    <input
-                      value={filters.breed}
-                      onChange={(event) =>
-                        setFilters((previous) => ({
-                          ...previous,
-                          breed: event.target.value,
-                        }))
-                      }
-                      placeholder="Digite a raça"
-                      maxLength={60}
-                    />
-                  </span>
-                </label>
+                <BreedFilter
+                  value={filters.breeds}
+                  onChange={(breeds) => setFilters((previous) => ({ ...previous, breeds }))}
+                />
                 <label className="search-field location-field">
                   <span>Onde mora o crush?</span>
                   <span className="search-input">
@@ -647,6 +684,27 @@ export function PetApp({
                         ? "Ver todos os cachorros"
                         : "Cadastrar meu cachorro"}
                   </button>
+                </div>
+              )}
+              {tab === "discover" && !busy && dogs.length > 0 && (
+                <div className="discover-pagination">
+                  {loadMoreError && <p className="form-error" role="alert">{loadMoreError}</p>}
+                  {nextCursor ? (
+                    <button
+                      className="secondary-button"
+                      disabled={loadingMore}
+                      onClick={() => void loadMore()}
+                    >
+                      {loadingMore ? "Buscando mais cachorros…" : "Ver mais cachorros"}
+                    </button>
+                  ) : (
+                    <p>Você já viu todos os cachorros desta busca.</p>
+                  )}
+                  <span className="sr-only" role="status">
+                    {loadingMore
+                      ? "Buscando mais cachorros…"
+                      : `${dogs.length} ${dogs.length === 1 ? "cachorro exibido" : "cachorros exibidos"}.`}
+                  </span>
                 </div>
               )}
             </section>

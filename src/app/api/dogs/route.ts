@@ -18,7 +18,7 @@ export async function GET(request: Request) {
         }),
       });
     }
-    return NextResponse.json({ dogs: await discover(params, user?.id) });
+    return NextResponse.json(await discover(params, user?.id));
   } catch (error) {
     return failure(error);
   }

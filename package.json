@@ -12,6 +12,7 @@
     "db:generate": "prisma generate",
     "db:local": "node scripts/local-database.mjs",
     "db:migrate": "prisma migrate deploy",
+    "seed:profiles": "node scripts/seed-profiles.mjs",
     "admin:grant": "node scripts/grant-admin.mjs",
     "test:admin": "node --test tests/admin/*.test.mjs"
   },

@@ -305,19 +305,21 @@ p {
   border-bottom: 1px solid var(--line);
   background: var(--surface-header);
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 20px;
 }
-.breadcrumb {
-  display: flex;
-  gap: 13px;
-  font-size: var(--font-size-caption);
-  color: var(--text-secondary);
+.mobile-brand {
+  display: none;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
 }
-.breadcrumb strong {
-  font-weight: 600;
-  color: var(--ink);
+.mobile-brand img {
+  display: block;
+}
+.topbar-cta-short-label {
+  display: none;
 }
 .topbar-right {
   display: flex;
@@ -588,6 +590,109 @@ h1 {
 .location-field {
   flex: 0.8;
 }
+.breed-filter {
+  position: relative;
+  min-width: 0;
+}
+.breed-filter-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--text-secondary) 65%, var(--line));
+  border-radius: 7px;
+  background: var(--surface-input);
+  color: var(--ink);
+  font-size: var(--font-size-body);
+  text-align: left;
+}
+.breed-filter-trigger > span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.breed-filter-trigger > svg {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+.breed-filter-trigger:focus-visible,
+.breed-filter-option input:focus-visible {
+  outline: 2px solid var(--pink);
+  outline-offset: 2px;
+}
+.breed-filter-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 100%;
+  min-width: 250px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 12px 30px #21152f26;
+}
+.search-field .breed-filter-search {
+  padding: 9px 12px;
+}
+.breed-filter-hint {
+  margin: 8px 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+}
+.breed-filter-options {
+  max-height: min(260px, 40dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.breed-filter-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: var(--font-size-body);
+  cursor: pointer;
+}
+.breed-filter-option:hover,
+.breed-filter-option:has(:checked) {
+  background: var(--pink-soft);
+}
+.search-field .breed-filter-option input {
+  width: 20px;
+  height: 20px;
+  min-height: 0;
+  padding: 0;
+  flex-shrink: 0;
+  accent-color: var(--pink);
+  cursor: pointer;
+}
+.breed-filter-actions > button {
+  min-height: 44px;
+  padding: 8px 4px;
+}
+.breed-filter-other {
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+}
+.breed-filter-other small {
+  display: block;
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+}
+.breed-filter-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding-top: 12px;
+}
 .filter-button {
   display: flex;
   align-items: center;
@@ -691,6 +796,16 @@ h1 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 22px;
+}
+.discover-pagination {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
 }
 .dog-card {
   border: 1px solid var(--line);
@@ -1597,13 +1712,10 @@ h1 {
     height: auto;
     min-height: 70px;
     padding-block: 12px;
+    justify-content: space-between;
   }
-  .breadcrumb > span {
-    display: none;
-  }
-  .breadcrumb strong {
-    font-size: var(--font-size-ui);
-    color: var(--purple);
+  .mobile-brand {
+    display: block;
   }
   .topbar-cta {
     font-size: var(--font-size-ui);
@@ -1850,7 +1962,9 @@ h1 {
     gap: 12px;
   }
   .topbar-right {
-    flex-basis: 100%;
+    flex: 1;
+    min-width: 0;
+    gap: 8px;
     justify-content: space-between;
   }
   .theme-selector button {
@@ -1862,6 +1976,12 @@ h1 {
   .topbar-cta {
     font-size: var(--font-size-caption);
     padding: 10px;
+  }
+  .topbar-cta-label {
+    display: none;
+  }
+  .topbar-cta-short-label {
+    display: inline;
   }
   .dog-grid {
     grid-template-columns: minmax(0, 1fr);

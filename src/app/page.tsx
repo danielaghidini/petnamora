@@ -5,7 +5,7 @@ import { PetApp } from "@/features/dogs/pet-app";
 export const dynamic = "force-dynamic";
 export default async function Home() {
   const user = await currentUser();
-  const [dogs, myDogs] = await Promise.all([
+  const [discovery, myDogs] = await Promise.all([
     discover(new URLSearchParams(), user?.id),
     user
       ? db.dog.findMany({
@@ -27,7 +27,7 @@ export default async function Home() {
     : [];
   return (
     <PetApp
-      initialDogs={dogs}
+      initialDiscovery={discovery}
       initialUser={user}
       initialMyDogs={myDogs}
       initialLikedDogs={likes.map((like) => like.to)}

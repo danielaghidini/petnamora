@@ -182,6 +182,130 @@ test("admin permissions, moderation and audit through HTTP", { timeout: 120000 }
       assert.match(denied, /Acesso restrito/);
       assert.ok(!denied.includes(second.email));
     });
+    await t.test("discovery loads batches of 12 without skipping profiles or losing filters", async () => {
+      const owner = await db.user.create({
+        data: { name: "Pagination test", email: "pagination@admin-verification.invalid", passwordHash },
+      });
+      const breed = "Pagination fixture";
+      const createdAt = new Date("2026-01-01T00:00:00.000Z");
+      await db.dog.createMany({
+        data: Array.from({ length: 65 }, (_, i) => ({
+          ...dogInput, ownerId: owner.id, name: `Pagination ${i}`, breed, createdAt,
+          city: i < 25 ? "Campinas" : "São Paulo",
+          sex: i % 2 ? "MALE" : "FEMALE", pedigree: i % 2 === 0,
+        })),
+      });
+      await db.dog.createMany({ data: [
+        { ...dogInput, ownerId: owner.id, breed, active: false },
+        { ...dogInput, ownerId: owner.id, breed, neutered: true },
+        { ...dogInput, ownerId: owner.id, breed, blockedAt: new Date() },
+      ] });
+      async function page(params) {
+        const response = await request(`/api/dogs?${params}`);
+        assert.equal(response.status, 200);
+        return response.json();
+      }
+      const expected = await db.dog.findMany({
+        where: { breed, active: true, neutered: false, blockedAt: null },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }], select: { id: true },
+      });
+      const params = new URLSearchParams({ breed });
+      let result = await page(params);
+      assert.equal(result.dogs.length, 12);
+      assert.ok(result.nextCursor);
+      const found = result.dogs.map((dog) => dog.id);
+      assert.ok(!("createdAt" in result.dogs[0]));
+      // A new profile and a removed cursor row must not shift subsequent batches.
+      await db.dog.create({ data: { ...dogInput, ownerId: owner.id, breed } });
+      await db.dog.delete({ where: { id: found.at(-1) } });
+      const batchSizes = [result.dogs.length];
+      while (result.nextCursor) {
+        params.set("cursor", result.nextCursor);
+        result = await page(params);
+        assert.ok(result.dogs.length <= 12);
+        batchSizes.push(result.dogs.length);
+        found.push(...result.dogs.map((dog) => dog.id));
+        assert.ok(batchSizes.length < 10, "Pagination must terminate");
+      }
+      assert.deepEqual(batchSizes, [12, 12, 12, 12, 12, 5]);
+      assert.deepEqual(found, expected.map((dog) => dog.id));
+      assert.equal(new Set(found).size, 65);
+      assert.equal(result.nextCursor, null);
+
+      const filters = new URLSearchParams({ breed, city: "Campinas", sex: "FEMALE", size: "Grande", pedigree: "true" });
+      const filtered = [];
+      do {
+        result = await page(filters);
+        assert.ok(result.dogs.every((dog) => dog.city === "Campinas" && dog.sex === "FEMALE" && dog.size === "Grande" && dog.pedigree));
+        filtered.push(...result.dogs.map((dog) => dog.id));
+        if (result.nextCursor) filters.set("cursor", result.nextCursor);
+      } while (result.nextCursor);
+      assert.ok(filtered.length >= 12);
+      assert.equal(new Set(filtered).size, filtered.length);
+
+      const exactBreed = "Exactly twelve";
+      await db.dog.createMany({ data: Array.from({ length: 12 }, () => ({ ...dogInput, breed: exactBreed, ownerId: owner.id })) });
+      result = await page(new URLSearchParams({ breed: exactBreed }));
+      assert.equal(result.dogs.length, 12);
+      assert.equal(result.nextCursor, null);
+      assert.deepEqual(await page(new URLSearchParams({ breed: "No matching breed" })), { dogs: [], nextCursor: null });
+      const ownCookie = await login(owner.email);
+      const own = await (await request(`/api/dogs?breed=${encodeURIComponent(breed)}`, { cookie: ownCookie })).json();
+      assert.deepEqual(own, { dogs: [], nextCursor: null });
+      for (const cursor of ["", "invalid", Buffer.from(JSON.stringify({ createdAt: "invalid", id: "x" })).toString("base64url")]) {
+        assert.equal((await request(`/api/dogs?cursor=${cursor}`)).status, 400);
+      }
+    });
+    await t.test("multiple breeds and Others combine with filters across every page", async () => {
+      const owner = await db.user.create({
+        data: { name: "Breed filters test", email: "breeds@admin-verification.invalid", passwordHash },
+      });
+      const city = "Teste de raças";
+      const profiles = [
+        ...Array.from({ length: 13 }, () => "Labrador"),
+        ...Array.from({ length: 13 }, () => "Pug"),
+        "Beagle", "Raça fora da lista", "Outra raça", "labrador", "Vira-lata", "SRD", "Shih Tzu",
+      ];
+      await db.dog.createMany({ data: profiles.map((breed) => ({
+        ...dogInput, ownerId: owner.id, breed, city,
+        createdAt: new Date("2026-02-01T00:00:00.000Z"),
+      })) });
+      await db.dog.createMany({ data: [
+        { ...dogInput, ownerId: owner.id, city, breed: "Pug", blockedAt: new Date() },
+        { ...dogInput, ownerId: owner.id, city, breed: "Pug", neutered: true },
+        { ...dogInput, ownerId: owner.id, city, breed: "Raça oculta", active: false },
+        { ...dogInput, ownerId: owner.id, city, breed: "Pug", sex: "MALE" },
+      ] });
+      async function allPages(breeds) {
+        const params = new URLSearchParams({ city, sex: "FEMALE", size: "Grande" });
+        breeds.forEach((breed) => params.append("breeds", breed));
+        const dogs = [];
+        let pages = 0;
+        while (true) {
+          const response = await request(`/api/dogs?${params}`);
+          assert.equal(response.status, 200);
+          const result = await response.json();
+          dogs.push(...result.dogs);
+          assert.ok(++pages < 10, "Pagination must terminate");
+          if (!result.nextCursor) break;
+          params.set("cursor", result.nextCursor);
+        }
+        assert.equal(new Set(dogs.map((dog) => dog.id)).size, dogs.length);
+        return dogs;
+      }
+      const selected = await allPages(["Labrador", "Pug"]);
+      assert.equal(selected.length, 27);
+      assert.ok(selected.every((dog) => ["labrador", "pug"].includes(dog.breed.toLowerCase())));
+      const others = await allPages(["other"]);
+      assert.deepEqual(others.map((dog) => dog.breed).sort(), ["Outra raça", "Raça fora da lista"]);
+      const combined = await allPages(["Labrador", "Pug", "other"]);
+      assert.equal(combined.length, 29);
+      assert.ok(combined.every((dog) => dog.breed !== "Beagle" && dog.sex === "FEMALE"));
+      const srd = await allPages(["Sem raça definida (SRD)"]);
+      assert.deepEqual(srd.map((dog) => dog.breed).sort(), ["SRD", "Vira-lata"]);
+      assert.deepEqual((await allPages(["Shih-tzu"])).map((dog) => dog.breed), ["Shih Tzu"]);
+      assert.equal((await allPages([])).length, 33);
+    });
   } finally {
     if (server && server.exitCode === null) {
       const exited = once(server, "exit");
