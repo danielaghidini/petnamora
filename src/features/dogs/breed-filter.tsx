@@ -115,8 +115,8 @@ export function BreedFilter({
             </label>
           </div>
           <div className="breed-filter-actions">
-            <button type="button" className="text-button" onClick={() => onChange([])} disabled={!value.length}>Limpar raças</button>
-            <button type="button" className="text-button" onClick={() => { close(); trigger.current?.focus(); }}>Pronto</button>
+            <button type="button" className="text-button breed-filter-clear" onClick={() => onChange([])} disabled={!value.length}>Limpar</button>
+            <button type="button" className="primary-button" onClick={() => { close(); trigger.current?.focus(); }}>Pronto</button>
           </div>
         </div>
       )}
