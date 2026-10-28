@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   BadgeCheck,
+  ClipboardCheck,
   Compass,
   Flag,
   Heart,
@@ -16,7 +17,6 @@ import {
   Plus,
   Search,
   ShieldCheck,
-  Sparkles,
   X,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
@@ -466,10 +466,10 @@ export function PetApp({
           </Link>
           <nav className="discovery-switch" aria-label="Modos de descobrir">
             <button type="button" aria-pressed={tab === "discover" && discoverMode === "grid"} onClick={() => chooseDiscoverMode("grid")}>
-              <LayoutGrid size={17} /> Explorar
+              <Search size={17} /> Explorar
             </button>
             <button type="button" aria-pressed={tab === "discover" && discoverMode === "swipe"} onClick={() => chooseDiscoverMode("swipe")}>
-              <Sparkles size={17} /> Modo crush
+              <Heart size={17} /> Modo crush
             </button>
           </nav>
           <div className="topbar-right">
@@ -1017,18 +1017,13 @@ export function PetApp({
               </div>
               <p className="detail-bio">{detail.bio}</p>
               <h4>O que a família contou</h4>
-              <div className="detail-checks">
-                {[
-                  ["Pedigree", detail.pedigree],
-                  ["Vacinas em dia", detail.vaccinated],
-                  ["Exames realizados", detail.healthTests],
-                ].map(([label, value]) => (
-                  <p key={String(label)}>
-                    <BadgeCheck size={16} />
-                    {label}: {value ? "informado" : "não informado"}
-                  </p>
-                ))}
-              </div>
+              {detail.vaccinated || detail.pedigree || detail.healthTests ? (
+                <ul className="detail-checks" aria-label="Informações declaradas pela família">
+                  {detail.vaccinated && <li className="detail-health-tag"><ShieldCheck size={15} aria-hidden="true" /> Vacinado</li>}
+                  {detail.pedigree && <li><BadgeCheck size={15} aria-hidden="true" /> Pedigree</li>}
+                  {detail.healthTests && <li className="detail-health-tag"><ClipboardCheck size={15} aria-hidden="true" /> Exames em dia</li>}
+                </ul>
+              ) : <p className="detail-checks-empty">A família ainda não informou esses cuidados.</p>}
               <p className="form-note">
                 Informações contadas pela família, sem verificação dos
                 documentos pelo Pet Namora.
