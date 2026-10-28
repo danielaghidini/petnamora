@@ -73,5 +73,5 @@ export const dogSchema = z.object({
   pedigree: z.boolean(),
   vaccinated: z.boolean(),
   healthTests: z.boolean(),
-  neutered: z.boolean(),
+  neutered: z.boolean().optional(),
 });

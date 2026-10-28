@@ -65,6 +65,7 @@ model Like {
 }
 model Match {
   id String @id @default(cuid())
+  isMatch Boolean @default(true)
   dogAId String
   dogBId String
   createdAt DateTime @default(now())

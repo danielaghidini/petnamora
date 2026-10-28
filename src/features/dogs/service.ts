@@ -97,39 +97,60 @@ export async function discover(params: URLSearchParams, userId?: string) {
   };
 }
 
-export async function likeDog(userId: string, fromId: string, toId: string) {
+async function eligiblePair(tx: Prisma.TransactionClient, userId: string, fromId: string, toId: string, oppositeSex: boolean) {
   if (fromId === toId) throw new HttpError("Escolha outro cachorro.");
+  const [from, to] = await Promise.all([
+    tx.dog.findFirst({ where: { id: fromId, ...allowedDog } }),
+    tx.dog.findFirst({ where: { id: toId, ...allowedDog } }),
+  ]);
+  if (!from || from.ownerId !== userId) throw new HttpError("Perfil não autorizado.", 403);
+  if (!to || !to.active) throw new HttpError("Perfil indisponível.", 404);
+  if (to.ownerId === userId || (oppositeSex && from.sex === to.sex))
+    throw new HttpError(oppositeSex
+      ? "Para esse namorinho, escolha um cachorro do sexo oposto e de outra família."
+      : "Escolha um cachorro de outra família para conversar.");
+  if (from.neutered || to.neutered || !from.active)
+    throw new HttpError("Os dois perfis precisam estar ativos e disponíveis para cruzamento.");
+  const reported = await tx.report.findFirst({
+    where: { OR: [{ reporterId: userId, dogId: toId }, { reporterId: to.ownerId, dogId: fromId }] },
+  });
+  if (reported) throw new HttpError("Esse contato não está disponível.", 403);
+}
+
+export const conversationInclude = {
+  dogA: { select: publicDogFields },
+  dogB: { select: publicDogFields },
+  messages: { orderBy: { createdAt: "desc" as const }, take: 1, select: { text: true, createdAt: true } },
+} as const;
+
+export async function openConversation(userId: string, fromId: string, toId: string) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await db.$transaction(async (tx) => {
+        await eligiblePair(tx, userId, fromId, toId, false);
+        const [dogAId, dogBId] = [fromId, toId].sort();
+        return tx.match.upsert({
+          where: { dogAId_dogBId: { dogAId, dogBId } },
+          create: { dogAId, dogBId, isMatch: false },
+          update: {},
+          include: conversationInclude,
+        });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2034", "P2002"].includes(error.code) && attempt < 2) continue;
+      throw error;
+    }
+  }
+  throw new HttpError("Não foi possível abrir a conversa. Tente novamente.", 409);
+}
+
+export async function likeDog(userId: string, fromId: string, toId: string) {
   // Serializable isolation makes simultaneous reciprocal likes create exactly one match.
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await db.$transaction(
         async (tx) => {
-          const [from, to] = await Promise.all([
-            tx.dog.findFirst({ where: { id: fromId, ...allowedDog } }),
-            tx.dog.findFirst({ where: { id: toId, ...allowedDog } }),
-          ]);
-          if (!from || from.ownerId !== userId)
-            throw new HttpError("Perfil não autorizado.", 403);
-          if (!to || !to.active)
-            throw new HttpError("Perfil indisponível.", 404);
-          if (to.ownerId === userId || from.sex === to.sex)
-            throw new HttpError(
-              "Para esse namorinho, escolha um cachorro do sexo oposto e de outra família.",
-            );
-          if (from.neutered || to.neutered || !from.active)
-            throw new HttpError(
-              "Para esse namorinho, os dois cachorros precisam ter perfis ativos e estar disponíveis para cruzamento.",
-            );
-          const reported = await tx.report.findFirst({
-            where: {
-              OR: [
-                { reporterId: userId, dogId: toId },
-                { reporterId: to.ownerId, dogId: fromId },
-              ],
-            },
-          });
-          if (reported)
-            throw new HttpError("Esse namorinho não está disponível.", 403);
+          await eligiblePair(tx, userId, fromId, toId, true);
           await tx.like.upsert({
             where: { fromId_toId: { fromId, toId } },
             create: { fromId, toId },
@@ -142,8 +163,8 @@ export async function likeDog(userId: string, fromId: string, toId: string) {
           const [dogAId, dogBId] = [fromId, toId].sort();
           const match = await tx.match.upsert({
             where: { dogAId_dogBId: { dogAId, dogBId } },
-            create: { dogAId, dogBId },
-            update: {},
+            create: { dogAId, dogBId, isMatch: true },
+            update: { isMatch: true },
           });
           return { matched: true, matchId: match.id };
         },

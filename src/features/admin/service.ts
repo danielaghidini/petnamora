@@ -19,7 +19,7 @@ export const adminReportFields = {
 
 export async function adminOverview() {
   const [users, dogs, matches, openReports, suspendedUsers, blockedDogs, recentReports] = await Promise.all([
-    db.user.count(), db.dog.count(), db.match.count(),
+    db.user.count(), db.dog.count(), db.match.count({ where: { isMatch: true } }),
     db.report.count({ where: { status: "OPEN" } }),
     db.user.count({ where: { suspendedAt: { not: null } } }),
     db.dog.count({ where: { blockedAt: { not: null } } }),

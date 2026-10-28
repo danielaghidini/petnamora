@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { Camera, LoaderCircle } from "lucide-react";
 import { api } from "@/lib/client";
 import { Select } from "@/components/ui/select";
+import { BreedField } from "./breed-field";
 import type { DogProfile, Viewer } from "./types";
 
 export function AuthForm({
@@ -186,7 +187,6 @@ export function DogForm({
       pedigree: data.has("pedigree"),
       vaccinated: data.has("vaccinated"),
       healthTests: data.has("healthTests"),
-      neutered: data.has("neutered"),
     };
     try {
       const result = await api<{ dog: DogProfile }>("/api/dogs", {
@@ -230,7 +230,7 @@ export function DogForm({
     "TO",
   ];
   return (
-    <form className="stack-form" onSubmit={submit}>
+    <form className="stack-form dog-form" onSubmit={submit}>
       <label className="photo-upload">
         {photo ? (
           <img src={photo} alt="Foto do seu cachorro" />
@@ -263,17 +263,7 @@ export function DogForm({
             placeholder="Nome do seu cachorro"
           />
         </label>
-        <label>
-          Raça
-          <input
-            name="breed"
-            defaultValue={dog?.breed}
-            required
-            minLength={2}
-            maxLength={60}
-            placeholder="Raça do seu cachorro"
-          />
-        </label>
+        <BreedField defaultValue={dog?.breed} />
         <label>
           Sexo
           <Select label="Sexo" name="sex" defaultValue={dog?.sex}
@@ -352,14 +342,6 @@ export function DogForm({
             defaultChecked={dog?.healthTests}
           />{" "}
           Exames de saúde realizados
-        </label>
-        <label className="check-label">
-          <input
-            type="checkbox"
-            name="neutered"
-            defaultChecked={dog?.neutered}
-          />{" "}
-          É castrado (fica fora da busca por namorinho)
         </label>
       </div>
       <p className="form-note">

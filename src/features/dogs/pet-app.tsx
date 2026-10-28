@@ -99,6 +99,8 @@ export function PetApp({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [likingId, setLikingId] = useState("");
+  const [messagingId, setMessagingId] = useState("");
+  const conversationInFlight = useRef(false);
   const likeInFlight = useRef(false);
   const searchPanel = useRef<HTMLFormElement>(null);
 
@@ -295,6 +297,27 @@ export function PetApp({
       likeInFlight.current = false;
     }
   }
+  async function message(dog: DogProfile) {
+    if (conversationInFlight.current) return;
+    setDetail(null);
+    if (!user) { setAuthOpen(true); return; }
+    if (!myDogs.length) { addDog(); return; }
+    conversationInFlight.current = true;
+    setMessagingId(dog.id);
+    setError("");
+    try {
+      const { match } = await api<{ match: MatchProfile }>("/api/matches", {
+        method: "POST",
+        body: JSON.stringify({ fromId: activeDogId || myDogs[0].id, toId: dog.id }),
+      });
+      setChatMatch(match);
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      setMessagingId("");
+      conversationInFlight.current = false;
+    }
+  }
   async function filter(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -361,7 +384,7 @@ export function PetApp({
       <Select
         label="Mandar um coração em nome de"
         value={activeDogId}
-        disabled={busy || !!likingId}
+        disabled={busy || !!likingId || !!messagingId}
         onValueChange={(dogId) => void selectDog(dogId)}
         options={myDogs.map((dog) => ({ value: dog.id, label: dog.name }))}
       />
@@ -425,11 +448,12 @@ export function PetApp({
             </button>
             {user && (
               <button
-                className="icon-button"
+                className="icon-button sidebar-logout"
                 onClick={() => void logout()}
                 aria-label="Sair"
+                title="Sair da conta"
               >
-                <LogOut size={17} />
+                <LogOut size={18} />
               </button>
             )}
           </div>
@@ -467,11 +491,11 @@ export function PetApp({
             <div className="page-heading">
               <div>
                 <div className="eyebrow">
-                  <span /> TEM CORAÇÃO BATENDO POR AQUI
+                  <span /> UM BOM PAPO COMEÇA COM UM OI
                 </div>
-                <h1>Deu namorinho!</h1>
+                <h1>Namorinhos e papos</h1>
                 <p>
-                  Os cachorros trocaram corações. Agora os humanos podem bater um papo!
+                  Suas conversas e as trocas de corações ficam todas por aqui.
                 </p>
               </div>
               <span className="heading-doodle">
@@ -713,6 +737,9 @@ export function PetApp({
                       busy={likingId === dog.id}
                       onLike={() => void like(dog)}
                       onOpen={() => setDetail(dog)}
+                      onMessage={tab === "discover" ? () => void message(dog) : undefined}
+                      messageBusy={messagingId === dog.id}
+                      messageDisabled={!!messagingId}
                     />
                   ))}
                 </div>
@@ -831,7 +858,7 @@ export function PetApp({
             <section>
               {busy ? (
                 <div className="empty-state">
-                  <p>Buscando seus namorinhos…</p>
+                  <p>Buscando seus papos…</p>
                 </div>
               ) : matches.length ? (
                 <div className="match-list">
@@ -849,12 +876,13 @@ export function PetApp({
                         <img src={other.photoUrl} alt={other.name} />
                         <div>
                           <strong>
-                            {mine.name} <Heart size={13} fill="currentColor" />{" "}
+                            {mine.name} {match.isMatch ? <Heart size={13} fill="currentColor" /> : <MessageCircle size={13} />}{" "}
                             {other.name}
                           </strong>
+                          <small className="conversation-kind">{match.isMatch ? "Namorinho" : "Conversa direta"}</small>
                           <p>
                             {match.messages[0]?.text ||
-                              "Deu namorinho! Que tal mandar o primeiro oi?"}
+                              (match.isMatch ? "Deu namorinho! Que tal mandar o primeiro oi?" : "Mande um oi para começar esse papo.")}
                           </p>
                         </div>
                         <MessageCircle size={21} />
@@ -865,17 +893,17 @@ export function PetApp({
                 </div>
               ) : (
                 <div className="empty-state">
-                  <Heart size={42} />
-                  <h3>O namorinho começa com dois corações.</h3>
+                  <MessageCircle size={42} />
+                  <h3>Ainda não tem papo por aqui.</h3>
                   <p>
-                    Quando alguém também curtir seu cachorro, o papo de vocês
-                    aparece aqui.
+                    Mande uma mensagem pela lista do Descobrir ou troque corações
+                    no Modo crush. Seus papos aparecem aqui.
                   </p>
                   <button
                     className="primary-button"
-                    onClick={() => void navigate("discover")}
+                    onClick={() => chooseDiscoverMode("grid")}
                   >
-                    Achar um namorinho
+                    Explorar perfis
                   </button>
                 </div>
               )}
@@ -1018,6 +1046,12 @@ export function PetApp({
                   ? "Coraçãozinho enviado"
                   : "Mandar um coração"}
               </button>
+              {tab === "discover" && discoverMode === "grid" && (
+                <button type="button" className="secondary-button" disabled={!!messagingId}
+                  onClick={() => void message(detail)}>
+                  <MessageCircle size={17} /> Mandar mensagem
+                </button>
+              )}
               <button
                 className="report-link"
                 onClick={() => {
@@ -1044,7 +1078,7 @@ export function PetApp({
             ? `${chatMatch.dogA.name} e ${chatMatch.dogB.name}`
             : "Conversa"
         }
-        description="O namorinho começou. Agora é só dar um oi!"
+        description={chatMatch?.isMatch ? "O namorinho começou. Agora é só dar um oi!" : "Dê um oi para a família e conheça melhor esse focinho."}
         wide
       >
         {chatMatch && user && (
@@ -1108,7 +1142,7 @@ export function PetApp({
           <p>
             O nome do cachorro, a foto, a descrição e a cidade aparecem no
             perfil público. Seu e-mail e sua senha ficam de fora. Só os
-            responsáveis pelo namorinho podem abrir a conversa. Guarde endereço
+            participantes do papo podem abrir a conversa. Guarde endereço
             e documentos pessoais fora do perfil público.
           </p>
           <h3>Nossa primeira versão</h3>
