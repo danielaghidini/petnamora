@@ -11,7 +11,9 @@
     "test:migrations": "node --test tests/migrations/*.test.mjs",
     "db:generate": "prisma generate",
     "db:local": "node scripts/local-database.mjs",
-    "db:migrate": "prisma migrate deploy"
+    "db:migrate": "prisma migrate deploy",
+    "admin:grant": "node scripts/grant-admin.mjs",
+    "test:admin": "node --test tests/admin/*.test.mjs"
   },
   "dependencies": {
     "@next/env": "16.1.6",

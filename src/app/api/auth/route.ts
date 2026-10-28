@@ -72,9 +72,11 @@ export async function POST(request: Request) {
     ) {
       throw new HttpError("Ops, o e-mail ou a senha não conferem.", 401);
     }
+    if (user.suspendedAt)
+      throw new HttpError("Esta conta está suspensa. Entre em contato com a equipe do Pet Namora.", 403);
     await createSession(user.id);
     return NextResponse.json({
-      user: { id: user.id, name: user.name, email: user.email },
+      user: { id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin },
     });
   } catch (error) {
     if (

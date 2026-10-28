@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     await db.report.upsert({
       where: { reporterId_dogId: { reporterId: user.id, dogId } },
       create: { reporterId: user.id, dogId, reason },
-      update: { reason },
+      update: { reason, status: "OPEN", reviewedAt: null },
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

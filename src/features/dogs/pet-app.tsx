@@ -315,6 +315,11 @@ export function PetApp({
               {item.id === "discover" && <span className="nav-dot" />}
             </button>
           ))}
+          {user?.isAdmin && (
+            <Link href="/admin" className="nav-item">
+              <ShieldCheck size={20} /> <span>Administração</span>
+            </Link>
+          )}
         </nav>
         <div className="sidebar-guide">
           <div className="guide-icon">
@@ -357,6 +362,11 @@ export function PetApp({
             <strong>{navigation.find((item) => item.id === tab)?.label}</strong>
           </div>
           <div className="topbar-right">
+            {user?.isAdmin && (
+              <Link href="/admin" className="icon-button" aria-label="Abrir administração">
+                <ShieldCheck size={20} />
+              </Link>
+            )}
             <ThemeSelector />
             <button className="primary-button topbar-cta" onClick={addDog}>
               <Plus size={17} /> Cadastrar meu cachorro

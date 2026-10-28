@@ -11,10 +11,13 @@ model User {
   email String @unique
   passwordHash String
   createdAt DateTime @default(now())
+  isAdmin Boolean @default(false)
+  suspendedAt DateTime?
   dogs Dog[]
   sessions Session[]
   messages Message[]
   reports Report[]
+  adminActions AdminAction[]
 }
 model Session {
   id String @id @default(cuid())
@@ -40,6 +43,7 @@ model Dog {
   healthTests Boolean @default(false)
   neutered Boolean @default(false)
   active Boolean @default(true)
+  blockedAt DateTime?
   createdAt DateTime @default(now())
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   sentLikes Like[] @relation("LikesFrom")
@@ -85,7 +89,27 @@ model Report {
   dogId String
   reason String
   createdAt DateTime @default(now())
+  status ReportStatus @default(OPEN)
+  reviewedAt DateTime?
   reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
   dog Dog @relation(fields: [dogId], references: [id], onDelete: Cascade)
   @@unique([reporterId, dogId])
+  @@index([status, createdAt])
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+model AdminAction {
+  id String @id @default(cuid())
+  actorId String
+  action String
+  targetId String
+  reason String
+  createdAt DateTime @default(now())
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  @@index([createdAt])
 }

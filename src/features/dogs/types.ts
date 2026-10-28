@@ -16,7 +16,7 @@ export type DogProfile = {
   neutered: boolean;
   active: boolean;
 };
-export type Viewer = { id: string; name: string; email: string };
+export type Viewer = { id: string; name: string; email: string; isAdmin: boolean };
 export type MatchProfile = {
   id: string;
   dogA: DogProfile;

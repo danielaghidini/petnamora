@@ -21,8 +21,14 @@ export const publicDogFields = {
   active: true,
 } as const;
 
+// Moderation is independent of the availability declared by the owner.
+export const allowedDog = {
+  blockedAt: null,
+  owner: { suspendedAt: null },
+} as const;
+
 export async function discover(params: URLSearchParams, userId?: string) {
-  const where: Prisma.DogWhereInput = { active: true, neutered: false };
+  const where: Prisma.DogWhereInput = { ...allowedDog, active: true, neutered: false };
   const breed = params.get("breed")?.trim();
   const city = params.get("city")?.trim();
   const sex = params.get("sex");
@@ -52,8 +58,8 @@ export async function likeDog(userId: string, fromId: string, toId: string) {
       return await db.$transaction(
         async (tx) => {
           const [from, to] = await Promise.all([
-            tx.dog.findUnique({ where: { id: fromId } }),
-            tx.dog.findUnique({ where: { id: toId } }),
+            tx.dog.findFirst({ where: { id: fromId, ...allowedDog } }),
+            tx.dog.findFirst({ where: { id: toId, ...allowedDog } }),
           ]);
           if (!from || from.ownerId !== userId)
             throw new HttpError("Perfil não autorizado.", 403);
@@ -118,6 +124,10 @@ export async function accessibleMatch(matchId: string, userId: string) {
     include: { dogA: true, dogB: true },
   });
   if (!match) throw new HttpError("Conversa não encontrada.", 404);
+  const allowed = await db.dog.count({
+    where: { id: { in: [match.dogAId, match.dogBId] }, ...allowedDog },
+  });
+  if (allowed !== 2) throw new HttpError("Conversa indisponível.", 403);
   const reported = await db.report.findFirst({
     where: {
       OR: [

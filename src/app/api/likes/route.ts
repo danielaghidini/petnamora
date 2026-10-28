@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { checkOrigin, failure, HttpError } from "@/lib/http";
 import { db } from "@/lib/prisma";
-import { likeDog, publicDogFields } from "@/features/dogs/service";
+import { allowedDog, likeDog, publicDogFields } from "@/features/dogs/service";
 export async function GET(request: Request) {
   try {
     const user = await requireUser();
@@ -19,8 +19,8 @@ export async function GET(request: Request) {
     const likes = await db.like.findMany({
       where: {
         ...(fromId ? { fromId } : {}),
-        from: { ownerId: user.id },
-        to: { reports: { none: { reporterId: user.id } } },
+        from: { ...allowedDog, ownerId: user.id },
+        to: { ...allowedDog, reports: { none: { reporterId: user.id } } },
       },
       select: { to: { select: publicDogFields } },
       orderBy: { createdAt: "desc" },

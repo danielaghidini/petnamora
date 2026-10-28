@@ -26,13 +26,23 @@ export async function currentUser() {
   }
   const session = await db.session.findUnique({
     where: { id: sessionId },
-    include: { user: { select: { id: true, name: true, email: true } } },
+    include: {
+      user: { select: { id: true, name: true, email: true, isAdmin: true, suspendedAt: true } },
+    },
   });
-  return session && session.expiresAt > new Date() ? session.user : null;
+  if (!session || session.expiresAt <= new Date() || session.user.suspendedAt)
+    return null;
+  const { id, name, email, isAdmin } = session.user;
+  return { id, name, email, isAdmin };
 }
 export async function requireUser() {
   const user = await currentUser();
   if (!user) throw new HttpError("Entre na sua conta para continuar.", 401);
+  return user;
+}
+export async function requireAdmin() {
+  const user = await requireUser();
+  if (!user.isAdmin) throw new HttpError("Acesso exclusivo de administradores.", 403);
   return user;
 }
 export async function createSession(userId: string) {

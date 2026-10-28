@@ -31,6 +31,24 @@ Abra http://localhost:3003. `db:local` cria `.env` com credenciais aleatórias, 
 
 A instalação começa sem perfis, curtidas ou conversas. Todos os cães exibidos vêm de cadastros de tutores. Não há carga automática de dados fictícios. A migração `20261027200000_remove_demo_profiles` remove os antigos perfis marcados como demonstração e suas interações, preservando os cadastros reais.
 
+## Administração
+
+O painel fica em `/admin` e usa o mesmo login do Pet Namora, com permissão de administrador verificada no servidor em cada acesso e alteração. O cadastro público nunca concede essa permissão. Administradores também veem um atalho no menu e no cabeçalho do site.
+
+Após aplicar as migrações (`npm run db:migrate`), cadastre sua conta normalmente e conceda acesso no ambiente que contém essa conta:
+
+```powershell
+npm run admin:grant -- --email=seu-email@dominio.com
+```
+
+O comando usa o `DATABASE_URL` do ambiente atual, exige uma conta existente e registra a concessão no histórico. Para produção, execute-o no serviço Pet Namora com o banco de produção configurado. Não existe senha administrativa padrão nem promoção automática do primeiro cadastro.
+
+O painel oferece totais da comunidade, busca e paginação de usuários e cachorros, suspensão/reativação de contas, bloqueio/liberação de perfis, análise e reabertura de denúncias e histórico com administrador, motivo e data de cada ação. Toda alteração exige confirmação e motivo. Administradores não podem ser suspensos pelo painel.
+
+Suspender uma conta revoga suas sessões e impede login, descoberta e interações de seus perfis. Bloquear um cachorro impede descoberta, curtidas e conversas; o bloqueio permanece mesmo que a família edite o cadastro. Reativar a conta não remove bloqueios individuais. Concluir ou arquivar uma denúncia não altera automaticamente o bloqueio global nem remove a proteção pessoal do denunciante.
+
+Após `npm run build`, `npm run test:admin` inicia uma instância temporária do Next.js com schema PostgreSQL isolado e verifica permissões, moderação e histórico via HTTP. Os cenários são apagados ao terminar e não usam contas reais.
+
 ## Estrutura
 
 ```text
@@ -60,9 +78,9 @@ O teste de migração usa o PostgreSQL configurado em `DATABASE_URL`, cria cená
 
 ## Limites desta versão
 
-Sem cobrança, recuperação de senha, verificação de e-mail, verificação documental, equipe/painel de moderação, notificações e geolocalização por raio. Saúde e pedigree são autodeclarados, sem selo de certificação. O app não avalia aptidão veterinária para reprodução. Busca limitada aos 60 resultados mais recentes; curtidas e conexões, a 100 registros.
+Sem cobrança, recuperação de senha, verificação de e-mail, verificação documental, notificações e geolocalização por raio. Saúde e pedigree são autodeclarados, sem selo de certificação. O app não avalia aptidão veterinária para reprodução. Busca limitada aos 60 resultados mais recentes; curtidas e conexões, a 100 registros.
 
-O limitador de login é por e-mail e processo; substitua por proteção compartilhada por conta/IP antes de escalar ou abrir ao público. A validação de upload confere assinatura binária e tamanho e deve evoluir para decodificação/normalização e cotas. As sessões expiradas e fotos órfãs (inclusive uploads abandonados na Cloudflare) precisam de limpeza periódica. Defina política de privacidade e exclusão/exportação de dados e implemente moderação antes de lançamento público.
+O limitador de login é por e-mail e processo; substitua por proteção compartilhada por conta/IP antes de escalar ou abrir ao público. A validação de upload confere assinatura binária e tamanho e deve evoluir para decodificação/normalização e cotas. As sessões expiradas e fotos órfãs (inclusive uploads abandonados na Cloudflare) precisam de limpeza periódica. Defina política de privacidade, exclusão/exportação de dados e uma rotina de análise de denúncias antes de lançamento público.
 
 ## Fotos na Cloudflare
 

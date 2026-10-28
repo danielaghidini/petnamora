@@ -1,5 +1,15 @@
 # Verificação do MVP
 
+## Painel administrativo — 28/10/2026
+
+- Criado `/admin` com login restrito, visão geral, busca e paginação de usuários e cachorros, suspensão de contas, bloqueio independente de perfis, análise de denúncias e histórico com autor e motivo. O cadastro público não concede acesso de administrador.
+- Migração `20261028180000_admin_panel` aplicada no banco local próprio. A suspensão revoga sessões e impede login; a moderação também filtra descoberta, curtidas e matches e bloqueia leitura/envio em conversas já existentes. Editar um cachorro não remove seu bloqueio.
+- TypeScript, ESLint, build de produção e testes existentes de migração passaram. `test:admin` inicia o servidor standalone com banco em schema isolado e confere acessos anônimo/comum/admin, cadastro sem escalada de privilégios, comando de concessão, origem externa, dados inválidos, contas administrativas protegidas, conflitos, moderação, análise/reabertura de denúncias e revogação de permissão.
+- No navegador, uma conta temporária em schema isolado entrou pelo formulário, bloqueou um perfil com motivo obrigatório e confirmou a atualização no histórico. Nenhum erro apareceu no console. A interface foi conferida com largura de celular e de computador. O schema, as contas e o servidor dessa prévia foram removidos ao terminar.
+- A concessão de acesso usa `npm run admin:grant -- --email=...` no ambiente que contém a conta existente. Não há senha padrão. A publicação em produção é uma etapa separada.
+
+![Painel em ambiente temporário de teste](screenshots/admin-panel.jpg)
+
 ## PostgreSQL no Railway — 27/10/2026
 
 - Criado o serviço `Postgres` (`22441e6a-f3de-4bd4-a75f-f9c87ccd8ea1`) no ambiente `production` do projeto próprio Pet Namora, com volume persistente `postgres-volume`. O serviço ficou online.

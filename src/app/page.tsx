@@ -1,5 +1,5 @@
 import { currentUser } from "@/lib/auth";
-import { discover, publicDogFields } from "@/features/dogs/service";
+import { allowedDog, discover, publicDogFields } from "@/features/dogs/service";
 import { db } from "@/lib/prisma";
 import { PetApp } from "@/features/dogs/pet-app";
 export const dynamic = "force-dynamic";
@@ -19,7 +19,8 @@ export default async function Home() {
     ? await db.like.findMany({
         where: {
           fromId: myDogs[0].id,
-          to: { reports: { none: { reporterId: user!.id } } },
+          from: allowedDog,
+          to: { ...allowedDog, reports: { none: { reporterId: user!.id } } },
         },
         select: { to: { select: publicDogFields } },
       })
