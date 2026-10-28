@@ -2142,15 +2142,37 @@ h1 {
   font-weight: 700;
 }
 .detail-checks {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin: 10px 0;
+  padding: 0;
+  list-style: none;
 }
-.detail-checks p {
-  display: flex;
-  gap: 7px;
+.detail-checks li {
+  display: inline-flex;
+  gap: 6px;
   align-items: center;
-  font-size: var(--font-size-body);
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--text-accent) 20%, var(--line));
+  border-radius: 999px;
+  background: var(--tag-surface);
+  color: var(--text-accent);
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+}
+.detail-checks li > svg {
+  flex-shrink: 0;
+}
+.detail-checks .detail-health-tag {
+  border-color: color-mix(in srgb, var(--success-text) 25%, var(--line));
+  background: var(--success-surface);
+  color: var(--success-text);
+}
+.detail-checks-empty {
+  margin: 10px 0;
+  font-size: var(--font-size-caption);
   color: var(--text-secondary);
 }
 .detail-info > .primary-button {
