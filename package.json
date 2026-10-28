@@ -14,12 +14,14 @@
     "db:migrate": "prisma migrate deploy",
     "seed:profiles": "node scripts/seed-profiles.mjs",
     "admin:grant": "node scripts/grant-admin.mjs",
-    "test:admin": "node --test tests/admin/*.test.mjs"
+    "test:admin": "node --test tests/admin/*.test.mjs",
+    "test:discover": "node --test tests/discover/*.test.mjs"
   },
   "dependencies": {
     "@next/env": "16.1.6",
     "@prisma/client": "5.22.0",
     "@radix-ui/react-dialog": "1.1.15",
+    "@radix-ui/react-select": "2.2.6",
     "bcryptjs": "3.0.3",
     "clsx": "2.1.1",
     "jsonwebtoken": "9.0.3",

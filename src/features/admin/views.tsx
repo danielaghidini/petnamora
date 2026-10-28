@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { Flag, Heart, PawPrint, Users } from "lucide-react";
 import { db } from "@/lib/prisma";
+import { Select } from "@/components/ui/select";
 import { AdminActionButton } from "./controls";
 import { adminOverview, adminReportFields, adminUserFields } from "./service";
 import { reportLabels } from "./validation";
@@ -46,10 +47,8 @@ export function AdminSearch({ filters }: { filters: AdminFilters }) {
   return <form className="admin-search" action="/admin">
     <input type="hidden" name="view" value={filters.view} />
     <label>Buscar<input name="q" defaultValue={filters.q} placeholder={filters.view === "users" ? "Nome ou e-mail" : "Nome, raça ou e-mail da família"} maxLength={100} /></label>
-    <label>Situação<select name="status" defaultValue={filters.status}>
-      <option value="">Todas</option>
-      {choices.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-    </select></label>
+    <label>Situação<Select key={`${filters.view}-${filters.status}`} label="Situação" name="status" defaultValue={filters.status}
+      options={[{ value: "", label: "Todas" }, ...choices.map(([value, label]) => ({ value, label }))]} /></label>
     <button className="primary-button">Buscar</button>
     {(filters.q || filters.status) && <Link className="secondary-button" href={`/admin?view=${filters.view}`}>Limpar</Link>}
   </form>;

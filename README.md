@@ -24,6 +24,7 @@ Abra http://localhost:3003. `db:local` cria `.env` com credenciais aleatórias, 
 - Cadastro e edição de até cinco cães por tutor, foto JPG/PNG/WebP, raça, sexo, idade em meses, porte, cidade/UF, descrição e informações de saúde declaradas.
 - Fotos no Cloudflare Images em produção, com entrega pela CDN; armazenamento local para desenvolvimento.
 - Busca por cidade e múltiplas raças, com lista pesquisável e opção “Outros” para raças fora da lista; filtros por sexo, porte e pedigree declarado. Descobrir carrega 12 perfis por vez, com botão “Ver mais cachorros” que preserva a busca aplicada.
+- Modo crush no menu superior: um perfil por vez, com arraste à esquerda para passar e à direita para curtir, botões e setas do teclado. Reutiliza os filtros e carrega os próximos perfis automaticamente. As curtidas seguem as regras do aplicativo; passar um perfil vale apenas para a rodada atual.
 - Curtidas entre cães ativos, não castrados, de sexos opostos e tutores diferentes; match somente com reciprocidade.
 - Chat persistente exclusivo dos tutores do match; atualização por polling a cada cinco segundos enquanto a página está visível, com as 100 mensagens mais recentes.
 - Denúncia persistente que oculta o perfil para o denunciante e bloqueia a conversa entre o par.
@@ -81,6 +82,7 @@ No Windows, encerre o servidor antes de rodar o build: o Prisma Client mantém u
 npm run typecheck
 npm run lint
 npm run test:migrations
+npm run test:discover
 npm run build
 ```
 
