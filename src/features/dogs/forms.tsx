@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from "react";
 import { Camera, LoaderCircle } from "lucide-react";
 import { api } from "@/lib/client";
+import { Select } from "@/components/ui/select";
 import type { DogProfile, Viewer } from "./types";
 
 export function AuthForm({
@@ -105,9 +106,12 @@ export function AuthForm({
         />
       </label>
       {register && (
-        <label className="check-label">
-          <input type="checkbox" required /> Sou maior de 18 anos e responsável
-          pelas informações do perfil.
+        <label className="check-label consent-option">
+          <input type="checkbox" required />
+          <span>
+            <strong>Sou maior de 18 anos</strong>
+            <small>Sou responsável pelas informações do perfil.</small>
+          </span>
         </label>
       )}
       {error && (
@@ -272,11 +276,9 @@ export function DogForm({
         </label>
         <label>
           Sexo
-          <select name="sex" defaultValue={dog?.sex ?? ""} required>
-            <option value="" disabled>Selecione o sexo</option>
-            <option value="FEMALE">Fêmea</option>
-            <option value="MALE">Macho</option>
-          </select>
+          <Select label="Sexo" name="sex" defaultValue={dog?.sex}
+            placeholder="Selecione o sexo" required
+            options={[{ value: "FEMALE", label: "Fêmea" }, { value: "MALE", label: "Macho" }]} />
         </label>
         <label>
           Idade em meses
@@ -292,21 +294,15 @@ export function DogForm({
         </label>
         <label>
           Porte
-          <select name="size" defaultValue={dog?.size ?? ""} required>
-            <option value="" disabled>Selecione o porte</option>
-            <option>Pequeno</option>
-            <option>Médio</option>
-            <option>Grande</option>
-          </select>
+          <Select label="Porte" name="size" defaultValue={dog?.size}
+            placeholder="Selecione o porte" required
+            options={["Pequeno", "Médio", "Grande"].map((size) => ({ value: size, label: size }))} />
         </label>
         <label>
           Estado
-          <select name="state" defaultValue={dog?.state ?? ""} required>
-            <option value="" disabled>Selecione o estado</option>
-            {states.map((state) => (
-              <option key={state}>{state}</option>
-            ))}
-          </select>
+          <Select label="Estado" name="state" defaultValue={dog?.state}
+            placeholder="Selecione o estado" required
+            options={states.map((state) => ({ value: state, label: state }))} />
         </label>
       </div>
       <label>

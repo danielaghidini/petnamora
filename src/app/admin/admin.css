@@ -28,7 +28,8 @@ a.admin-stat:hover { border-color: var(--pink); }
 .admin-search { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); margin-bottom: 22px; }
 .admin-search label, .admin-login-form label { display: flex; flex-direction: column; gap: 7px; font-size: .875rem; font-weight: 600; }
 .admin-search label:first-of-type { flex: 1; min-width: 180px; }
-.admin-search input, .admin-search select, .admin-login-form input, .admin-login-form textarea { min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--surface-input); color: var(--ink); width: 100%; }
+.admin-search input, .admin-login-form input, .admin-login-form textarea { min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--surface-input); color: var(--ink); width: 100%; }
+.admin-search .select-trigger { min-width: 160px; }
 .admin-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
 .admin-table { border-collapse: collapse; width: 100%; font-size: .875rem; text-align: left; }
 .admin-table th { padding: 16px 20px; color: var(--text-secondary); background: var(--surface-subtle); font-weight: 600; white-space: nowrap; }
