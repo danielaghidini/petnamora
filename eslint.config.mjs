@@ -7,5 +7,5 @@ export default defineConfig([
   {
     rules: { "@next/next/no-img-element": "off" },
   },
-  globalIgnores([".next/**", "node_modules/**", "next-env.d.ts"]),
+  globalIgnores([".next/**", ".local/**", "node_modules/**", "next-env.d.ts"]),
 ]);

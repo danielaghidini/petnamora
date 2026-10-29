@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { Camera, LoaderCircle, Trash2, X } from "lucide-react";
 import { api } from "@/lib/client";
 import { Select } from "@/components/ui/select";
@@ -11,11 +12,13 @@ import { dogPhotos, MAX_DOG_PHOTOS } from "./photos";
 export function AuthForm({
   onSuccess,
   initialError = "",
+  initialRegister = true,
 }: {
   onSuccess: (user: Viewer, registered: boolean) => void;
   initialError?: string;
+  initialRegister?: boolean;
 }) {
-  const [register, setRegister] = useState(true);
+  const [register, setRegister] = useState(initialRegister);
   const [error, setError] = useState(initialError);
   const [busy, setBusy] = useState(false);
   const [adult, setAdult] = useState(false);
@@ -154,6 +157,7 @@ export function AuthForm({
           required
         />
       </label>
+      {!register && <Link className="auth-text-link" href="/forgot-password">Esqueci minha senha</Link>}
       <button className="primary-button" disabled={busy}>
         {busy ? <LoaderCircle className="spin" size={18} /> : null}
         {register ? "Criar minha conta" : "Entrar"}

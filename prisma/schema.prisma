@@ -19,6 +19,24 @@ model User {
   messages Message[]
   reports Report[]
   adminActions AdminAction[]
+  passwordResetToken PasswordResetToken?
+}
+model PasswordResetToken {
+  tokenHash String @id
+  userId String @unique
+  email String
+  expiresAt DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([expiresAt])
+}
+
+// Shared across app instances; stores a digest instead of the requested address.
+model PasswordResetRequest {
+  emailHash String @id
+  windowStart DateTime
+  requestedAt DateTime
+  attempts Int
+  @@index([requestedAt])
 }
 model Session {
   id String @id @default(cuid())

@@ -45,9 +45,18 @@ export async function requireAdmin() {
   if (!user.isAdmin) throw new HttpError("Acesso exclusivo de administradores.", 403);
   return user;
 }
-export async function createSession(userId: string) {
-  const session = await db.session.create({
-    data: { userId, expiresAt: new Date(Date.now() + 7 * 86400000) },
+export async function createSession(userId: string, expectedPasswordHash?: string) {
+  const session = await db.$transaction(async (tx) => {
+    // Serialize session creation with password changes: an old password must not
+    // create a new session after recovery has revoked the previous sessions.
+    const [user] = await tx.$queryRaw<{ passwordHash: string; suspendedAt: Date | null }[]>`
+      SELECT "passwordHash", "suspendedAt" FROM "User" WHERE "id" = ${userId} FOR UPDATE
+    `;
+    if (!user || user.suspendedAt || (expectedPasswordHash && user.passwordHash !== expectedPasswordHash))
+      throw new HttpError("Entre novamente com sua senha atual.", 401);
+    return tx.session.create({
+      data: { userId, expiresAt: new Date(Date.now() + 7 * 86400000) },
+    });
   });
   const token = jwt.sign({ sid: session.id }, secret(), {
     algorithm: "HS256",

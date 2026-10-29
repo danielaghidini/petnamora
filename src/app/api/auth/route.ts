@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/prisma";
 import { createSession, currentUser, endSession } from "@/lib/auth";
 import { checkOrigin, failure, HttpError } from "@/lib/http";
+import { passwordSchema } from "@/lib/password";
 
 const inputSchema = z.object({
   action: z.enum(["login", "register"]),
@@ -13,14 +14,7 @@ const inputSchema = z.object({
     .email("Informe um e-mail válido.")
     .max(254)
     .transform((value) => value.toLowerCase()),
-  password: z
-    .string()
-    .min(8, "A senha deve ter pelo menos 8 caracteres.")
-    .max(72)
-    .refine(
-      (value) => Buffer.byteLength(value, "utf8") <= 72,
-      "Essa senha ficou comprida demais. Tente uma um pouco menor.",
-    ),
+  password: passwordSchema,
 });
 // Bounded, per-process protection for the single-instance MVP. Use shared storage before scaling.
 const attempts = new Map<string, { count: number; resetAt: number }>();
@@ -74,7 +68,7 @@ export async function POST(request: Request) {
     }
     if (user.suspendedAt)
       throw new HttpError("Esta conta está suspensa. Entre em contato com a equipe do Pet Namora.", 403);
-    await createSession(user.id);
+    await createSession(user.id, user.passwordHash);
     return NextResponse.json({
       user: { id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin },
     });

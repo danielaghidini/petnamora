@@ -72,6 +72,7 @@ export function PetApp({
   initialLikedDogs,
   initialAuthError = "",
   initialGoogleLogin = false,
+  initialLogin = false,
 }: {
   initialDiscovery: DiscoverPage;
   initialUser: Viewer | null;
@@ -79,6 +80,7 @@ export function PetApp({
   initialLikedDogs: DogProfile[];
   initialAuthError?: string;
   initialGoogleLogin?: boolean;
+  initialLogin?: boolean;
 }) {
   const [user, setUser] = useState(initialUser);
   const [dogs, setDogs] = useState(initialDiscovery.dogs);
@@ -96,7 +98,7 @@ export function PetApp({
   const [matches, setMatches] = useState<MatchProfile[]>([]);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [authOpen, setAuthOpen] = useState(Boolean(initialAuthError));
+  const [authOpen, setAuthOpen] = useState(Boolean(initialAuthError) || initialLogin);
   const [authError, setAuthError] = useState(initialAuthError);
   const [dogFormOpen, setDogFormOpen] = useState(initialGoogleLogin && Boolean(initialUser) && !initialMyDogs.length);
   const [editingDog, setEditingDog] = useState<DogProfile>();
@@ -115,12 +117,12 @@ export function PetApp({
   const crushTrigger = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!initialAuthError && !initialGoogleLogin) return;
+    if (!initialAuthError && !initialGoogleLogin && !initialLogin) return;
     const url = new URL(window.location.href);
     url.searchParams.delete("auth");
     url.searchParams.delete("auth_error");
     window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
-  }, [initialAuthError, initialGoogleLogin]);
+  }, [initialAuthError, initialGoogleLogin, initialLogin]);
 
   function discoverParams(nextFilters: Filters) {
     const params = new URLSearchParams();
@@ -1000,6 +1002,7 @@ export function PetApp({
       >
         <AuthForm
           initialError={authError}
+          initialRegister={!initialLogin}
           onSuccess={(viewer) =>
             void authenticated(viewer)
           }
@@ -1178,7 +1181,7 @@ export function PetApp({
           <h3>Nossa primeira versão</h3>
           <p>
             Estamos dando as primeiras patinhas por aqui. Ainda não temos
-            verificação de documentos, recuperação de senha, cobrança ou equipe
+            verificação de documentos, cobrança ou equipe
             de moderação.
           </p>
         </div>

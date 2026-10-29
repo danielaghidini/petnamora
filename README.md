@@ -21,6 +21,7 @@ Abra http://localhost:3003. `db:local` cria `.env` com credenciais aleatórias, 
 ## O que funciona
 
 - Cadastro e login do tutor, senha com bcrypt, sessão revogável no banco e cookie HttpOnly.
+- Recuperação de senha por e-mail com Resend, link de uso único válido por uma hora e encerramento das sessões antigas após a troca.
 - Login e cadastro com Google, com confirmação de maioridade, seleção de conta e abertura do cadastro do cachorro para tutores sem perfis.
 - Cadastro e edição de até cinco cães por tutor, até 10 fotos JPG/PNG/WebP por cachorro (5 MB cada), seleção múltipla, remoção e escolha da foto principal. O perfil exibe uma galeria com setas e miniaturas. Raça em lista pesquisável com opção “Outros”, sexo, idade em meses, porte, cidade/UF, descrição e informações de saúde declaradas. Fotos e nomes de raças já cadastrados são preservados na edição.
 - Fotos no Cloudflare Images em produção, com entrega pela CDN; armazenamento local para desenvolvimento.
@@ -67,6 +68,26 @@ O botão solicita somente `openid email profile`. O servidor confere o estado e 
 Contas novas recebem nome e e-mail do Google, sem exigir criação de senha, e nunca recebem permissão administrativa. Nos acessos seguintes, o identificador Google reconhece a conta mesmo se o e-mail do provedor mudar. Para uma conta já cadastrada com senha, o vínculo automático por e-mail ocorre somente quando o Google é responsável por esse endereço (Gmail ou Google Workspace). Em endereços de outros provedores, o usuário é orientado a entrar com a senha existente, evitando vincular contas apenas pela coincidência de um e-mail externo. Suspensões também impedem o login Google.
 
 Sem as credenciais, o botão informa que a integração ainda precisa ser configurada, e o acesso por e-mail e senha continua disponível. `npm run test:auth`, após o build, verifica o fluxo HTTP com Google simulado e schema PostgreSQL isolado, sem contas ou serviços Google reais.
+
+## Recuperação de senha
+
+Na opção **Já tenho conta**, o link **Esqueci minha senha** abre `/forgot-password`. O e-mail leva a `/reset-password` para cadastrar e confirmar uma nova senha. Depois da troca, a pessoa precisa entrar novamente; todos os dispositivos conectados perdem a sessão anterior. Contas vinculadas ao Google também podem criar uma senha por esse fluxo, mantendo o vínculo Google.
+
+Aplique `npm run db:migrate` e configure no ambiente do Pet Namora:
+
+```dotenv
+APP_URL=https://petnamora.com.br
+RESEND_API_KEY=<chave de envio do Resend>
+EMAIL_FROM=nao-responda@petnamora.com.br
+```
+
+`EMAIL_FROM` deve conter somente o endereço, em um domínio verificado no Resend. O nome “Pet Namora” é acrescentado pelo servidor. Use uma chave com permissão de envio para esse domínio e desative o rastreamento de cliques no domínio usado para recuperação, para preservar o link sensível. A integração utiliza a [API de envio do Resend](https://resend.com/docs/api-reference/emails/send-email), sem dependência adicional. Não copie o `.env` de outro produto. Localmente, `APP_URL=http://localhost:3003` é permitido; em produção, HTTPS é obrigatório. A URL do e-mail vem exclusivamente de `APP_URL`, nunca do Host da requisição.
+
+O token tem 32 bytes aleatórios, é armazenado somente como SHA-256 e expira em uma hora. Pedir outro link substitui o anterior. O consumo, a atualização da senha e a exclusão das sessões são atômicos; envios simultâneos do formulário só permitem uma troca. A criação de sessões também confere a senha atual sob bloqueio da conta, impedindo um login antigo em andamento de criar uma sessão após a recuperação. Contas suspensas não recebem mensagens e não podem usar links já emitidos.
+
+O limitador fica no PostgreSQL e vale entre instâncias e reinícios: um pedido por minuto, até cinco por hora para cada e-mail, incluindo endereços sem cadastro. Somente o hash do endereço fica no limitador; registros sem pedidos há mais de 24 horas e tokens expirados são removidos em novas solicitações. A resposta normal não confirma se o endereço existe. Sem configuração, com rejeição do Resend, resposta sem ID ou timeout de 15 segundos, o endpoint retorna erro 503; o token desse envio é descartado. A confirmação significa que o provedor aceitou a mensagem, não que a caixa de entrada já a recebeu. Consulte os eventos de entrega no Resend em caso de bounce ou bloqueio posterior.
+
+Após `npm run build`, `npm run test:auth` verifica também a recuperação por HTTP, com schema PostgreSQL isolado e Resend simulado. Inclui expiração, reuso, concorrência, revogação de sessões, conta Google, limitação persistente, origem confiável e falhas de configuração/envio. Não envia e-mails reais.
 
 ## Administração
 
@@ -123,7 +144,7 @@ O teste de migração usa o PostgreSQL configurado em `DATABASE_URL`, cria cená
 
 ## Limites desta versão
 
-Sem cobrança, recuperação de senha, verificação de e-mail no cadastro por senha, verificação documental, notificações e geolocalização por raio. Saúde e pedigree são autodeclarados, sem selo de certificação. O app não avalia aptidão veterinária para reprodução. Curtidas e conexões são limitadas a 100 registros.
+Sem cobrança, verificação de e-mail no cadastro por senha, verificação documental, notificações e geolocalização por raio. Saúde e pedigree são autodeclarados, sem selo de certificação. O app não avalia aptidão veterinária para reprodução. Curtidas e conexões são limitadas a 100 registros.
 
 O limitador de login é por e-mail e processo; substitua por proteção compartilhada por conta/IP antes de escalar ou abrir ao público. A validação de upload confere assinatura binária e tamanho e deve evoluir para decodificação/normalização e cotas. As sessões expiradas e fotos órfãs (inclusive uploads abandonados na Cloudflare) precisam de limpeza periódica. Defina política de privacidade, exclusão/exportação de dados e uma rotina de análise de denúncias antes de lançamento público.
 

@@ -37,6 +37,7 @@ export default async function Home({ searchParams }: {
       initialLikedDogs={likes.map((like) => like.to)}
       initialAuthError={googleAuthErrorMessage(typeof params.auth_error === "string" ? params.auth_error : undefined)}
       initialGoogleLogin={params.auth === "google"}
+      initialLogin={params.auth === "login"}
     />
   );
 }

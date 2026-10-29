@@ -2133,6 +2133,24 @@ h1 {
   height: auto;
   margin: 0 auto;
 }
+.auth-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 480px;
+  padding: clamp(20px, 5vw, 36px);
+  border: 1px solid var(--modal-border);
+  border-radius: 17px;
+  background: var(--modal-surface);
+  box-shadow: var(--modal-shadow);
+}
+.auth-card h1 { font-size: 24px; color: var(--purple); text-align: center; }
+.auth-text-link { color: var(--pink-dark); text-align: center; font-size: var(--font-size-caption); }
+.auth-text-link:hover { text-decoration: underline; }
 .google-auth-button {
   min-height: 48px;
   color: var(--ink);
@@ -2641,6 +2659,7 @@ h1 {
     font-size: var(--font-size-caption);
   }
   .hero-banner {
+    display: none;
     margin-bottom: 21px;
     min-height: 225px;
     padding: 24px 21px;
