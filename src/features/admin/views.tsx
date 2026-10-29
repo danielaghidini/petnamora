@@ -110,18 +110,27 @@ export async function UsersView({ filters }: { filters: AdminFilters }) {
     ...(filters.q ? { OR: [{ name: { contains: filters.q, mode: "insensitive" } }, { email: { contains: filters.q, mode: "insensitive" } }] } : {}),
     ...(filters.status === "suspended" ? { suspendedAt: { not: null } } : filters.status === "active" ? { suspendedAt: null } : filters.status === "admin" ? { isAdmin: true } : {}),
   };
-  const [total, users] = await Promise.all([
+  const [total, users, pendingPhotos] = await Promise.all([
     db.user.count({ where }),
     db.user.findMany({ where, select: { ...adminUserFields, _count: { select: { dogs: true } } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: pageSize, skip: (filters.page - 1) * pageSize }),
+    db.photoDeletion.count(),
   ]);
-  return <><AdminSearch filters={filters} />{users.length ? <div className="admin-table-wrap"><table className="admin-table">
+  return <><AdminSearch filters={filters} />{pendingPhotos > 0 && <div className="admin-help" role="status">
+    <p>{pendingPhotos} foto(s) de contas excluídas aguardam limpeza.</p>
+    <AdminActionButton label="Limpar fotos pendentes" target="Fotos de contas excluídas" command={{ kind: "photo-cleanup" }}
+      description="Tente novamente a exclusão das fotos que ficaram pendentes no armazenamento." />
+  </div>}{users.length ? <div className="admin-table-wrap"><table className="admin-table">
     <caption className="sr-only">Usuários cadastrados</caption><thead><tr><th>Família</th><th>Cadastro</th><th>Cachorros</th><th>Situação</th><th>Ação</th></tr></thead>
     <tbody>{users.map((user) => <tr key={user.id}><td><strong>{user.name}</strong><span>{user.email}</span></td><td>{date(user.createdAt)}</td><td>{user._count.dogs}</td>
       <td><Badge warning={Boolean(user.suspendedAt)}>{user.isAdmin ? "Administrador" : user.suspendedAt ? "Suspenso" : "Ativo"}</Badge></td>
-      <td>{user.isAdmin ? <span className="admin-meta">Conta protegida</span> : <AdminActionButton target={user.email}
+      <td>{user.isAdmin ? <span className="admin-meta">Conta protegida</span> : <div className="admin-actions"><AdminActionButton target={user.email}
         label={user.suspendedAt ? "Reativar conta" : "Suspender conta"} danger={!user.suspendedAt}
         command={{ kind: "user", id: user.id, value: !user.suspendedAt, expected: Boolean(user.suspendedAt) }}
-        description={user.suspendedAt ? "A família poderá entrar novamente. Bloqueios individuais dos perfis serão mantidos." : "As sessões serão encerradas e os perfis, curtidas e conversas da família ficarão indisponíveis."} />}</td>
+        description={user.suspendedAt ? "A família poderá entrar novamente. Bloqueios individuais dos perfis serão mantidos." : "As sessões serão encerradas e os perfis, curtidas e conversas da família ficarão indisponíveis."} />
+        <AdminActionButton label="Excluir conta" target={user.email} danger
+          command={{ kind: "user-delete", id: user.id, expected: Boolean(user.suspendedAt) }}
+          description="Esta ação é definitiva: a conta, os cachorros, as curtidas, as conversas e as denúncias vinculadas serão excluídos. As fotos também serão apagadas do armazenamento, incluindo a Cloudflare; imagens usadas por outros cadastros serão preservadas." />
+      </div>}</td>
     </tr>)}</tbody></table></div> : <Empty>Tente outro nome, e-mail ou situação.</Empty>}<Pagination total={total} filters={filters} /></>;
 }
 
@@ -163,7 +172,8 @@ export async function ReportsView({ filters }: { filters: AdminFilters }) {
 }
 
 const actionLabels: Record<string, string> = {
-  USER_SUSPENDED: "Conta suspensa", USER_RESTORED: "Conta reativada",
+  USER_SUSPENDED: "Conta suspensa", USER_RESTORED: "Conta reativada", USER_DELETED: "Conta excluída",
+  PHOTO_CLEANUP_RETRIED: "Limpeza de fotos solicitada",
   DOG_BLOCKED: "Perfil bloqueado", DOG_RESTORED: "Perfil liberado",
   REPORT_OPEN: "Denúncia reaberta", REPORT_RESOLVED: "Análise concluída", REPORT_DISMISSED: "Denúncia arquivada",
   ADMIN_GRANTED: "Acesso de administrador concedido",

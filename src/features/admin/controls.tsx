@@ -81,9 +81,9 @@ export function AdminActionButton({ command, label, target, description, danger 
     setBusy(true);
     setError("");
     try {
-      await api("/api/admin", { method: "POST", body: JSON.stringify({ ...command, reason }) });
+      const result = await api<{ notice?: string }>("/api/admin", { method: "POST", body: JSON.stringify({ ...command, reason }) });
       setOpen(false);
-      setNotice("Alteração salva.");
+      setNotice(result.notice || "Alteração salva.");
       startTransition(() => router.refresh());
     } catch (error) {
       setError((error as Error).message);
@@ -106,7 +106,7 @@ export function AdminActionButton({ command, label, target, description, danger 
           {error && <p className="form-error" role="alert">{error}</p>}
           <div className="admin-actions">
             <button className="secondary-button" type="button" disabled={busy} onClick={() => setOpen(false)}>Cancelar</button>
-            <button className="primary-button" disabled={busy}>{busy && <LoaderCircle className="spin" size={16} />} Confirmar</button>
+            <button className="primary-button" disabled={busy}>{busy && <LoaderCircle className="spin" size={16} />} {command.kind === "user-delete" ? "Excluir definitivamente" : "Confirmar"}</button>
           </div>
         </form>
       </Modal>

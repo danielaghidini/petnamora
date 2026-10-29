@@ -37,16 +37,29 @@ export async function applyAdminChange(actorId: string, input: AdminChange) {
         if (!actor?.isAdmin || actor.suspendedAt)
           throw new HttpError("Acesso exclusivo de administradores.", 403);
         let action: string;
-        if (input.kind === "user") {
+        if (input.kind === "photo-cleanup") {
+          action = "PHOTO_CLEANUP_RETRIED";
+        } else if (input.kind === "user" || input.kind === "user-delete") {
           const target = await tx.user.findUnique({ where: { id: input.id }, select: adminUserFields });
           if (!target) throw new HttpError("Usuário não encontrado.", 404);
           if (target.isAdmin || target.id === actorId)
-            throw new HttpError("Contas de administradores não podem ser suspensas pelo painel.", 403);
-          if (Boolean(target.suspendedAt) !== input.expected || input.value === input.expected)
+            throw new HttpError("Contas de administradores não podem ser suspensas ou excluídas pelo painel.", 403);
+          if (Boolean(target.suspendedAt) !== input.expected || (input.kind === "user" && input.value === input.expected))
             throw new HttpError("A conta mudou. Atualize o painel antes de continuar.", 409);
-          await tx.user.update({ where: { id: input.id }, data: { suspendedAt: input.value ? new Date() : null } });
-          if (input.value) await tx.session.deleteMany({ where: { userId: input.id } });
-          action = input.value ? "USER_SUSPENDED" : "USER_RESTORED";
+          if (input.kind === "user-delete") {
+            // Former administrators may still own audit records protected by Restrict.
+            if (await tx.adminAction.count({ where: { actorId: input.id } }))
+              throw new HttpError("Esta conta possui histórico de administração e não pode ser excluída. Você pode suspendê-la.", 409);
+            const dogs = await tx.dog.findMany({ where: { ownerId: input.id }, select: { photoUrl: true, photoUrls: true } });
+            const urls = [...new Set(dogs.flatMap((dog) => [dog.photoUrl, ...dog.photoUrls]))];
+            if (urls.length) await tx.photoDeletion.createMany({ data: urls.map((url) => ({ url })), skipDuplicates: true });
+            await tx.user.delete({ where: { id: input.id } });
+            action = "USER_DELETED";
+          } else {
+            await tx.user.update({ where: { id: input.id }, data: { suspendedAt: input.value ? new Date() : null } });
+            if (input.value) await tx.session.deleteMany({ where: { userId: input.id } });
+            action = input.value ? "USER_SUSPENDED" : "USER_RESTORED";
+          }
         } else if (input.kind === "dog") {
           const target = await tx.dog.findUnique({ where: { id: input.id }, select: { blockedAt: true } });
           if (!target) throw new HttpError("Perfil não encontrado.", 404);
@@ -65,7 +78,7 @@ export async function applyAdminChange(actorId: string, input: AdminChange) {
           });
           action = `REPORT_${input.value}`;
         }
-        await tx.adminAction.create({ data: { actorId, action, targetId: input.id, reason: input.reason } });
+        await tx.adminAction.create({ data: { actorId, action, targetId: input.kind === "photo-cleanup" ? "photos" : input.id, reason: input.reason } });
         return { ok: true };
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {

@@ -20,3 +20,13 @@ export function isPhotoUrl(value: string) {
     return false;
   }
 }
+
+export function cloudflarePhotoIdFromUrl(value: string) {
+  try {
+    const url = new URL(value);
+    const imageId = url.pathname.split("/").slice(2, 4).join("/");
+    return value === cloudflarePhotoUrl(imageId) ? imageId : null;
+  } catch {
+    return null;
+  }
+}

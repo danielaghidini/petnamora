@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
 import { spawn, execFileSync } from "node:child_process";
 import { once } from "node:events";
-import { access } from "node:fs/promises";
+import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { createServer } from "node:net";
+import { createServer as createHttpServer } from "node:http";
 import path from "node:path";
 import test from "node:test";
 import bcrypt from "bcryptjs";
@@ -21,9 +23,27 @@ test("admin permissions, moderation and audit through HTTP", { timeout: 120000 }
   const rootDb = new PrismaClient();
   const db = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
   const password = randomBytes(18).toString("hex");
+  const uploads = await mkdtemp(path.join(tmpdir(), "petnamora-admin-"));
   let server;
   let serverLogs = "";
+  const imageRequests = [];
+  const failedImages = new Set();
+  const removedImages = new Set();
+  const imageServer = createHttpServer((request, response) => {
+    const imageId = decodeURIComponent(request.url.split("/images/v1/")[1] || "");
+    imageRequests.push({ imageId, method: request.method, authorization: request.headers.authorization });
+    response.setHeader("Content-Type", "application/json");
+    if (failedImages.has(imageId)) {
+      response.writeHead(503).end(JSON.stringify({ success: false }));
+    } else if (removedImages.has(imageId)) {
+      response.writeHead(404).end(JSON.stringify({ success: false, errors: [{ code: 5404 }] }));
+    } else {
+      removedImages.add(imageId);
+      response.end(JSON.stringify({ success: true }));
+    }
+  });
   try {
+    await new Promise((resolve) => imageServer.listen(0, "127.0.0.1", resolve));
     await rootDb.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
     execFileSync(process.execPath, [path.resolve("node_modules/prisma/build/index.js"), "migrate", "deploy"], {
       env: { ...process.env, DATABASE_URL: databaseUrl }, windowsHide: true, stdio: "pipe",
@@ -33,8 +53,11 @@ test("admin permissions, moderation and audit through HTTP", { timeout: 120000 }
     const port = listener.address().port;
     await new Promise((resolve) => listener.close(resolve));
     const origin = `http://127.0.0.1:${port}`;
-    server = spawn(process.execPath, [path.resolve(".next/standalone/server.js")], {
-      env: { ...process.env, DATABASE_URL: databaseUrl, NODE_ENV: "production", PORT: String(port), HOSTNAME: "127.0.0.1", APP_URL: origin, JWT_SECRET: randomBytes(48).toString("hex") },
+    server = spawn(process.execPath, ["--require", path.resolve("tests/admin/cloudflare-mock.cjs"), path.resolve(".next/standalone/server.js")], {
+      env: { ...process.env, DATABASE_URL: databaseUrl, NODE_ENV: "production", PORT: String(port), HOSTNAME: "127.0.0.1", APP_URL: origin, JWT_SECRET: randomBytes(48).toString("hex"),
+        CLOUDFLARE_ACCOUNT_ID: "a".repeat(32), CLOUDFLARE_API_TOKEN: "test-token", CLOUDFLARE_ACCOUNT_HASH: "test-hash",
+        UPLOAD_DIR: uploads,
+        ADMIN_TEST_IMAGES_URL: `http://127.0.0.1:${imageServer.address().port}` },
       windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
     });
     server.stdout.on("data", (chunk) => { serverLogs += chunk; });
@@ -94,7 +117,7 @@ test("admin permissions, moderation and audit through HTTP", { timeout: 120000 }
         const response = await request(`/admin?view=${view}`, { cookie: adminCookie });
         assert.equal(response.status, 200);
         const html = await response.text();
-        assert.match(html, /Cuidar de cada patinha/);
+        assert.match(html, /Acompanhe a comunidade e cuide dos relatos recebidos/);
         assert.ok(!html.includes(passwordHash));
       }
       const filtered = await (await request("/admin?view=users&q=second", { cookie: adminCookie })).text();
@@ -174,6 +197,101 @@ test("admin permissions, moderation and audit through HTTP", { timeout: 120000 }
       const actions = await db.adminAction.findMany({ where: { action: { not: "ADMIN_GRANTED" } } });
       assert.ok(actions.length >= 9);
       assert.ok(actions.every((action) => action.actorId === admin.id && action.reason.length >= 5));
+    });
+    await t.test("account deletion checks permissions and removes related data and exclusive photos", async () => {
+      const [target, peer] = await Promise.all(["delete-target", "delete-peer"].map((name) => db.user.create({
+        data: { name, email: `${name}@admin-verification.invalid`, passwordHash },
+      })));
+      const targetCookie = await login(target.email);
+      const imageId = `petnamora/${randomUUID()}`;
+      const sharedId = `petnamora/${randomUUID()}`;
+      const photo = (id) => `https://imagedelivery.net/test-hash/${id}/public`;
+      const localName = `${randomUUID()}.png`;
+      await writeFile(path.join(uploads, localName), "test photo");
+      const [owned, legacy, other] = await Promise.all([
+        db.dog.create({ data: { ...dogInput, ownerId: target.id, photoUrl: photo(imageId), photoUrls: [photo(imageId), photo(sharedId), `/api/photos/${localName}`] } }),
+        db.dog.create({ data: { ...dogInput, ownerId: target.id, photoUrl: photo(imageId) } }),
+        db.dog.create({ data: { ...dogInput, ownerId: peer.id, photoUrl: photo(sharedId), photoUrls: [photo(sharedId)] } }),
+      ]);
+      const conversation = await db.match.create({ data: { dogAId: owned.id, dogBId: other.id,
+        messages: { create: [{ senderId: target.id, text: "Mensagem da conta excluída" }, { senderId: peer.id, text: "Resposta" }] } } });
+      await db.like.createMany({ data: [{ fromId: owned.id, toId: other.id }, { fromId: other.id, toId: owned.id }] });
+      await db.report.createMany({ data: [{ reporterId: target.id, dogId: other.id, reason: "Relato do alvo" }, { reporterId: peer.id, dogId: owned.id, reason: "Relato sobre alvo" }] });
+      const deletion = { kind: "user-delete", id: target.id, expected: false, reason: "Remover cadastro de teste" };
+      const auditBefore = await db.adminAction.count();
+      const imagesBefore = imageRequests.length;
+      for (const [cookie, body, expected, requestOrigin] of [
+        [undefined, deletion, 401], [firstCookie, deletion, 403],
+        [adminCookie, deletion, 403, "https://other.invalid"],
+        [adminCookie, { ...deletion, reason: "" }, 400],
+        [adminCookie, { ...deletion, id: admin.id }, 403],
+        [adminCookie, { ...deletion, id: "missing-user" }, 404],
+        [adminCookie, { ...deletion, expected: true }, 409],
+      ]) {
+        assert.equal((await request("/api/admin", { cookie, body, requestOrigin })).status, expected);
+      }
+      assert.equal(await db.adminAction.count(), auditBefore);
+      assert.equal(imageRequests.length, imagesBefore);
+      assert.ok(await db.user.findUnique({ where: { id: target.id } }));
+      const html = await (await request("/admin?view=users&q=delete-target", { cookie: adminCookie })).text();
+      assert.ok(html.includes(`Excluir conta: ${target.email}`));
+      assert.ok(html.includes("Esta ação é definitiva"));
+      const response = await request("/api/admin", { cookie: adminCookie, body: deletion });
+      assert.equal(response.status, 200);
+      assert.equal((await response.json()).notice, "Conta e fotos excluídas.");
+      assert.equal(await db.user.findUnique({ where: { id: target.id } }), null);
+      assert.equal(await db.session.count({ where: { userId: target.id } }), 0);
+      assert.equal(await db.dog.count({ where: { id: { in: [owned.id, legacy.id] } } }), 0);
+      assert.equal(await db.like.count({ where: { OR: [{ fromId: owned.id }, { toId: owned.id }] } }), 0);
+      assert.equal(await db.match.findUnique({ where: { id: conversation.id } }), null);
+      assert.equal(await db.message.count({ where: { matchId: conversation.id } }), 0);
+      assert.equal(await db.report.count({ where: { OR: [{ reporterId: target.id }, { dogId: owned.id }] } }), 0);
+      assert.ok(await db.user.findUnique({ where: { id: peer.id } }));
+      assert.ok(await db.dog.findUnique({ where: { id: other.id } }));
+      assert.deepEqual(imageRequests.slice(imagesBefore), [{ imageId, method: "DELETE", authorization: "Bearer test-token" }]);
+      await assert.rejects(access(path.join(uploads, localName)), { code: "ENOENT" });
+      assert.equal(await db.photoDeletion.count(), 0);
+      assert.equal((await (await request("/api/auth", { cookie: targetCookie })).json()).user, null);
+      const audit = await db.adminAction.findMany({ where: { action: "USER_DELETED", targetId: target.id } });
+      assert.equal(audit.length, 1);
+      assert.equal(audit[0].actorId, admin.id);
+      assert.equal(audit[0].reason, deletion.reason);
+      assert.equal((await request("/api/admin", { cookie: adminCookie, body: deletion })).status, 404);
+      assert.equal(await db.adminAction.count({ where: { action: "USER_DELETED", targetId: target.id } }), 1);
+      const activity = await (await request("/admin?view=activity", { cookie: adminCookie })).text();
+      assert.ok(activity.includes("Conta excluída"));
+    });
+    await t.test("Cloudflare failures remain queued and admins can retry without losing the deleted account's photo URLs", async () => {
+      const target = await db.user.create({ data: { name: "Pending photos", email: "pending@admin-verification.invalid", passwordHash, suspendedAt: new Date() } });
+      const imageId = `petnamora/${randomUUID()}`;
+      const photoUrl = `https://imagedelivery.net/test-hash/${imageId}/public`;
+      await db.dog.create({ data: { ...dogInput, ownerId: target.id, photoUrl } });
+      failedImages.add(imageId);
+      const response = await request("/api/admin", { cookie: adminCookie, body: { kind: "user-delete", id: target.id, expected: true, reason: "Excluir conta suspensa" } });
+      assert.equal(response.status, 200);
+      assert.match((await response.json()).notice, /1 foto\(s\) com limpeza pendente/);
+      assert.equal(await db.user.findUnique({ where: { id: target.id } }), null);
+      assert.equal(await db.photoDeletion.count({ where: { url: photoUrl } }), 1);
+      const html = await (await request("/admin?view=users", { cookie: adminCookie })).text();
+      assert.ok(html.includes("Limpar fotos pendentes"));
+      const retry = { kind: "photo-cleanup", reason: "Repetir limpeza das fotos" };
+      assert.equal((await request("/api/admin", { cookie: firstCookie, body: retry })).status, 403);
+      failedImages.delete(imageId);
+      // Simulate the provider having deleted it before a previous response was lost.
+      removedImages.add(imageId);
+      const retried = await request("/api/admin", { cookie: adminCookie, body: retry });
+      assert.equal(retried.status, 200);
+      assert.equal((await retried.json()).notice, "Limpeza de fotos concluída.");
+      assert.equal(await db.photoDeletion.count(), 0);
+    });
+    await t.test("empty accounts can be deleted but former admins with audit records are preserved", async () => {
+      const empty = await db.user.create({ data: { name: "Empty", email: "empty@admin-verification.invalid", passwordHash } });
+      const deletion = { kind: "user-delete", id: empty.id, expected: false, reason: "Excluir cadastro sem cachorros" };
+      assert.equal((await request("/api/admin", { cookie: adminCookie, body: deletion })).status, 200);
+      const former = await db.user.create({ data: { name: "Former admin", email: "former@admin-verification.invalid", passwordHash,
+        adminActions: { create: { action: "ADMIN_GRANTED", targetId: "history", reason: "Preservar histórico" } } } });
+      assert.equal((await request("/api/admin", { cookie: adminCookie, body: { ...deletion, id: former.id } })).status, 409);
+      assert.ok(await db.user.findUnique({ where: { id: former.id } }));
     });
     await t.test("permissions are rechecked after admin access is revoked", async () => {
       await db.user.update({ where: { id: admin.id }, data: { isAdmin: false } });
@@ -414,6 +532,8 @@ test("admin permissions, moderation and audit through HTTP", { timeout: 120000 }
       await exited;
     }
     await db.$disconnect();
+    await new Promise((resolve) => imageServer.close(resolve));
+    await rm(uploads, { recursive: true, force: true });
     // Only the random schema created by this test is removed.
     await rootDb.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
     await rootDb.$disconnect();

@@ -55,7 +55,11 @@ npm run admin:grant -- --email=seu-email@dominio.com
 
 O comando usa o `DATABASE_URL` do ambiente atual, exige uma conta existente e registra a concessão no histórico. Para produção, execute-o no serviço Pet Namora com o banco de produção configurado. Não existe senha administrativa padrão nem promoção automática do primeiro cadastro.
 
-O painel oferece totais da comunidade, busca e paginação de usuários e cachorros, suspensão/reativação de contas, bloqueio/liberação de perfis, análise e reabertura de denúncias e histórico com administrador, motivo e data de cada ação. Toda alteração exige confirmação e motivo. Administradores não podem ser suspensos pelo painel.
+O painel oferece totais da comunidade, busca e paginação de usuários e cachorros, suspensão/reativação e exclusão de contas, bloqueio/liberação de perfis, análise e reabertura de denúncias e histórico com administrador, motivo e data de cada ação. Toda alteração exige confirmação e motivo. Administradores não podem ser suspensos nem excluídos pelo painel.
+
+Em Usuários, **Excluir conta** remove definitivamente o usuário, suas sessões, cachorros, curtidas, conversas, mensagens e denúncias vinculadas, preservando o registro da ação administrativa. Contas com histórico como administrador são preservadas para manter a auditoria; podem ser suspensas após perderem a permissão administrativa.
+
+As fotos de capa e das galerias entram em uma fila persistente na mesma transação da exclusão. O servidor tenta apagá-las imediatamente, tanto do armazenamento local quanto da Cloudflare, preservando imagens ainda usadas em outros cadastros. Na Cloudflare, usa a [API de exclusão de imagens](https://developers.cloudflare.com/images/storage/manage-images/delete-images/) com o token `Images Write` já configurado, limitado às URLs da conta configurada e aos IDs `petnamora/<uuid>`. Falhas não perdem as URLs: o painel mostra a quantidade pendente e o botão **Limpar fotos pendentes** para repetir. Novas exclusões também tentam processar a fila, em lotes de até 50 fotos por solicitação. Uploads abandonados ou fotos retiradas anteriormente das galerias continuam sujeitos à limpeza periódica de órfãos.
 
 Suspender uma conta revoga suas sessões e impede login, descoberta e interações de seus perfis. Bloquear um cachorro impede descoberta, curtidas e conversas; o bloqueio permanece mesmo que a família edite o cadastro. Reativar a conta não remove bloqueios individuais. Concluir ou arquivar uma denúncia não altera automaticamente o bloqueio global nem remove a proteção pessoal do denunciante.
 

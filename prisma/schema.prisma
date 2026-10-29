@@ -115,3 +115,10 @@ model AdminAction {
   actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
   @@index([createdAt])
 }
+
+// Kept after account deletion so failed storage requests can be retried.
+model PhotoDeletion {
+  id String @id @default(cuid())
+  url String @unique
+  createdAt DateTime @default(now())
+}
