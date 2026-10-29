@@ -15,7 +15,8 @@
     "seed:profiles": "node scripts/seed-profiles.mjs",
     "admin:grant": "node scripts/grant-admin.mjs",
     "test:admin": "node --test tests/admin/*.test.mjs",
-    "test:discover": "node --test tests/discover/*.test.mjs"
+    "test:discover": "node --test tests/discover/*.test.mjs",
+    "test:photos": "node --test tests/photos/*.test.mjs"
   },
   "dependencies": {
     "@next/env": "16.1.6",

@@ -1,10 +1,11 @@
 "use client";
 import { useState, type FormEvent } from "react";
-import { Camera, LoaderCircle } from "lucide-react";
+import { Camera, LoaderCircle, X } from "lucide-react";
 import { api } from "@/lib/client";
 import { Select } from "@/components/ui/select";
 import { BreedField } from "./breed-field";
 import type { DogProfile, Viewer } from "./types";
+import { dogPhotos, MAX_DOG_PHOTOS } from "./photos";
 
 export function AuthForm({
   onSuccess,
@@ -138,26 +139,32 @@ export function DogForm({
   dog?: DogProfile;
   onSaved: (dog: DogProfile) => void;
 }) {
-  const [photo, setPhoto] = useState(dog?.photoUrl || "");
+  const [photos, setPhotos] = useState(() => dog ? dogPhotos(dog) : []);
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  async function upload(file?: File) {
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Use uma foto de até 5 MB.");
+  async function upload(files: File[]) {
+    if (!files.length || uploading || busy) return;
+    if (photos.length + files.length > MAX_DOG_PHOTOS) {
+      setError(`Adicione até ${MAX_DOG_PHOTOS} fotos por cachorro.`);
+      return;
+    }
+    if (files.some((file) => file.size > 5 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(file.type))) {
+      setError("Use fotos JPG, PNG ou WebP de até 5 MB cada.");
       return;
     }
     setUploading(true);
     setError("");
-    const form = new FormData();
-    form.set("image", file);
     try {
-      const { url } = await api<{ url: string }>("/api/upload", {
-        method: "POST",
-        body: form,
-      });
-      setPhoto(url);
+      for (const file of files) {
+        const form = new FormData();
+        form.set("image", file);
+        const { url } = await api<{ url: string }>("/api/upload", {
+          method: "POST",
+          body: form,
+        });
+        setPhotos((current) => [...current, url]);
+      }
     } catch (error) {
       setError((error as Error).message);
     } finally {
@@ -166,8 +173,9 @@ export function DogForm({
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (uploading || busy) return;
     setError("");
-    if (!photo) {
+    if (!photos.length) {
       setError("Adicione uma foto do seu cachorro.");
       return;
     }
@@ -183,7 +191,8 @@ export function DogForm({
       city: data.get("city"),
       state: data.get("state"),
       bio: data.get("bio"),
-      photoUrl: photo,
+      photoUrl: photos[0],
+      photoUrls: photos,
       pedigree: data.has("pedigree"),
       vaccinated: data.has("vaccinated"),
       healthTests: data.has("healthTests"),
@@ -232,25 +241,45 @@ export function DogForm({
   return (
     <form className="stack-form dog-form" onSubmit={submit}>
       <label className="photo-upload">
-        {photo ? (
-          <img src={photo} alt="Foto do seu cachorro" />
-        ) : (
-          <Camera size={28} />
-        )}
+        <Camera size={28} aria-hidden="true" />
         <span>
           {uploading
-            ? "A foto fofa está chegando…"
-            : "Escolher uma foto bem fofa"}
-          <small>JPG, PNG ou WebP · até 5 MB</small>
+            ? "As fotos fofas estão chegando…"
+            : `Adicionar fotos (${photos.length}/${MAX_DOG_PHOTOS})`}
+          <small>Selecione várias fotos · JPG, PNG ou WebP · até 5 MB cada</small>
         </span>
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          disabled={uploading}
-          onChange={(event) => void upload(event.target.files?.[0])}
+          multiple
+          disabled={uploading || busy || photos.length >= MAX_DOG_PHOTOS}
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? []);
+            event.target.value = "";
+            void upload(files);
+          }}
           className="sr-only"
         />
       </label>
+      {photos.length > 0 && (
+        <div className="dog-photo-editor" aria-label="Fotos do cachorro">
+          {photos.map((url, index) => (
+            <div className="dog-photo-item" key={url}>
+              <img src={url} alt={`Foto ${index + 1} do seu cachorro`} />
+              <button type="button" className="photo-remove" aria-label={`Remover foto ${index + 1}`}
+                disabled={uploading || busy} onClick={() => setPhotos((current) => current.filter((photo) => photo !== url))}>
+                <X size={16} aria-hidden="true" />
+              </button>
+              <button type="button" className="photo-cover" aria-pressed={index === 0}
+                disabled={uploading || busy || index === 0}
+                aria-label={index === 0 ? `Foto ${index + 1} é a principal` : `Usar foto ${index + 1} como principal`}
+                onClick={() => setPhotos((current) => [url, ...current.filter((photo) => photo !== url)])}>
+                {index === 0 ? "Principal" : "Usar como principal"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="form-grid">
         <label>
           Nome

@@ -22,6 +22,7 @@ export const publicDogFields = {
   state: true,
   bio: true,
   photoUrl: true,
+  photoUrls: true,
   pedigree: true,
   vaccinated: true,
   healthTests: true,

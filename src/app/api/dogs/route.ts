@@ -4,6 +4,7 @@ import { checkOrigin, failure, HttpError } from "@/lib/http";
 import { db } from "@/lib/prisma";
 import { discover, publicDogFields } from "@/features/dogs/service";
 import { dogSchema } from "@/features/dogs/validation";
+import { photoData } from "@/features/dogs/photos";
 export async function GET(request: Request) {
   try {
     const user = await currentUser();
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     if ((await db.dog.count({ where: { ownerId: user.id } })) >= 5)
       throw new HttpError("Sua turminha pode ter até 5 cachorros por aqui.");
     const dog = await db.dog.create({
-      data: { ...input, ownerId: user.id },
+      data: { ...input, ...photoData(input), ownerId: user.id },
       select: publicDogFields,
     });
     return NextResponse.json({ dog }, { status: 201 });
@@ -55,7 +56,7 @@ export async function PATCH(request: Request) {
     const input = dogSchema.omit({ neutered: true }).parse(body);
     const dog = await db.dog.update({
       where: { id: existing.id },
-      data: input,
+      data: { ...input, ...photoData(input, existing) },
       select: publicDogFields,
     });
     return NextResponse.json({ dog });

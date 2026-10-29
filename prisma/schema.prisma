@@ -38,6 +38,7 @@ model Dog {
   state String
   bio String
   photoUrl String
+  photoUrls String[] @default([])
   pedigree Boolean @default(false)
   vaccinated Boolean @default(false)
   healthTests Boolean @default(false)

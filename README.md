@@ -21,7 +21,7 @@ Abra http://localhost:3003. `db:local` cria `.env` com credenciais aleatórias, 
 ## O que funciona
 
 - Cadastro e login do tutor, senha com bcrypt, sessão revogável no banco e cookie HttpOnly.
-- Cadastro e edição de até cinco cães por tutor, foto JPG/PNG/WebP, raça em lista pesquisável com opção “Outros”, sexo, idade em meses, porte, cidade/UF, descrição e informações de saúde declaradas. Nomes de raças já cadastrados são preservados na edição.
+- Cadastro e edição de até cinco cães por tutor, até 10 fotos JPG/PNG/WebP por cachorro (5 MB cada), seleção múltipla, remoção e escolha da foto principal. O perfil exibe uma galeria com setas e miniaturas. Raça em lista pesquisável com opção “Outros”, sexo, idade em meses, porte, cidade/UF, descrição e informações de saúde declaradas. Fotos e nomes de raças já cadastrados são preservados na edição.
 - Fotos no Cloudflare Images em produção, com entrega pela CDN; armazenamento local para desenvolvimento.
 - Busca por cidade e múltiplas raças, com lista pesquisável e opção “Outros” para raças fora da lista; filtros por sexo, porte e pedigree declarado. Descobrir carrega 12 perfis por vez, com botão “Ver mais cachorros” que preserva a busca aplicada.
 - Modo crush no menu superior: um perfil por vez, com arraste à esquerda para passar e à direita para curtir, botões e setas do teclado. Reutiliza os filtros e carrega os próximos perfis automaticamente. As curtidas seguem as regras do aplicativo; passar um perfil vale apenas para a rodada atual.
@@ -85,7 +85,10 @@ npm run lint
 npm run test:migrations
 npm run test:discover
 npm run build
+npm run test:photos
 ```
+
+`test:photos` usa o build standalone e um schema PostgreSQL isolado para conferir upload, cadastro com várias fotos, persistência, escolha da principal, remoção, permissões e compatibilidade com cadastros de foto única. Os dados e arquivos temporários são removidos ao terminar.
 
 O teste de migração usa o PostgreSQL configurado em `DATABASE_URL`, cria cenários em schemas isolados e desfaz todas as alterações ao terminar. Confere a remoção dos dados fictícios e a preservação de perfis, contas e interações reais.
 

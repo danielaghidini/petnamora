@@ -26,6 +26,7 @@ import { api } from "@/lib/client";
 import { cn } from "@/lib/utils";
 import { AuthForm, DogForm } from "./forms";
 import { DogCard } from "./dog-card";
+import { PhotoGallery } from "./photo-gallery";
 import { Chat } from "./chat";
 import { BreedFilter } from "./breed-filter";
 import { SwipeDiscover } from "./swipe-discover";
@@ -979,7 +980,7 @@ export function PetApp({
             ? `O perfil de ${editingDog.name}`
             : "Quem é esse amor de quatro patas?"
         }
-        description="Uma foto fofa e o jeitinho dele ajudam o crush a chegar."
+        description="Fotos fofas e o jeitinho dele ajudam o crush a chegar."
         wide
       >
         <DogForm
@@ -996,11 +997,7 @@ export function PetApp({
       >
         {detail && (
           <div className="dog-detail">
-            <img
-              className="detail-photo"
-              src={detail.photoUrl}
-              alt={detail.name}
-            />
+            <PhotoGallery key={detail.id} dog={detail} />
             <div className="detail-info">
               <span className="detail-breed">{detail.breed}</span>
               <h2>

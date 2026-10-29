@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isPhotoUrl } from "@/lib/photo-urls";
+import { MAX_DOG_PHOTOS } from "./photos";
 export const dogSchema = z.object({
   name: z
     .string()
@@ -70,6 +71,11 @@ export const dogSchema = z.object({
   photoUrl: z
     .string()
     .refine(isPhotoUrl, "Envie uma foto do seu cachorro."),
+  photoUrls: z.array(z.string().refine(isPhotoUrl, "Envie fotos JPG, PNG ou WebP do seu cachorro."))
+    .min(1, "Adicione pelo menos uma foto do seu cachorro.")
+    .max(MAX_DOG_PHOTOS, `Adicione até ${MAX_DOG_PHOTOS} fotos por cachorro.`)
+    .refine((urls) => new Set(urls).size === urls.length, "Remova as fotos repetidas.")
+    .optional(),
   pedigree: z.boolean(),
   vaccinated: z.boolean(),
   healthTests: z.boolean(),

@@ -10,6 +10,7 @@ export type DogProfile = {
   state: string;
   bio: string;
   photoUrl: string;
+  photoUrls: string[];
   pedigree: boolean;
   vaccinated: boolean;
   healthTests: boolean;
