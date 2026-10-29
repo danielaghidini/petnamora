@@ -5,6 +5,9 @@ import { db } from "@/lib/prisma";
 import { discover, publicDogFields } from "@/features/dogs/service";
 import { dogSchema } from "@/features/dogs/validation";
 import { photoData } from "@/features/dogs/photos";
+import { z } from "zod";
+import { deleteDog } from "@/features/dogs/delete";
+import { cleanDeletedPhotos } from "@/lib/photo-cleanup";
 export async function GET(request: Request) {
   try {
     const user = await currentUser();
@@ -60,6 +63,26 @@ export async function PATCH(request: Request) {
       select: publicDogFields,
     });
     return NextResponse.json({ dog });
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+const deleteDogSchema = z.object({ id: z.string().trim().min(1).max(100) }).strict();
+
+export async function DELETE(request: Request) {
+  try {
+    checkOrigin(request);
+    const user = await requireUser();
+    const { id } = deleteDogSchema.parse(await request.json());
+    await deleteDog(user.id, id);
+    try {
+      await cleanDeletedPhotos();
+    } catch {
+      // The profile is already deleted; queued photos can be retried by an admin.
+      console.error("Pet Namora: limpeza de fotos pendente após excluir cachorro.");
+    }
+    return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return failure(error);
   }

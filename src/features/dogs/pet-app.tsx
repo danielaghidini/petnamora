@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
@@ -70,11 +70,15 @@ export function PetApp({
   initialUser,
   initialMyDogs,
   initialLikedDogs,
+  initialAuthError = "",
+  initialGoogleLogin = false,
 }: {
   initialDiscovery: DiscoverPage;
   initialUser: Viewer | null;
   initialMyDogs: DogProfile[];
   initialLikedDogs: DogProfile[];
+  initialAuthError?: string;
+  initialGoogleLogin?: boolean;
 }) {
   const [user, setUser] = useState(initialUser);
   const [dogs, setDogs] = useState(initialDiscovery.dogs);
@@ -92,8 +96,9 @@ export function PetApp({
   const [matches, setMatches] = useState<MatchProfile[]>([]);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
-  const [dogFormOpen, setDogFormOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(Boolean(initialAuthError));
+  const [authError, setAuthError] = useState(initialAuthError);
+  const [dogFormOpen, setDogFormOpen] = useState(initialGoogleLogin && Boolean(initialUser) && !initialMyDogs.length);
   const [editingDog, setEditingDog] = useState<DogProfile>();
   const [detail, setDetail] = useState<DogProfile | null>(null);
   const [chatMatch, setChatMatch] = useState<MatchProfile | null>(null);
@@ -101,12 +106,21 @@ export function PetApp({
   const [guideOpen, setGuideOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [likingId, setLikingId] = useState("");
   const [messagingId, setMessagingId] = useState("");
   const conversationInFlight = useRef(false);
   const likeInFlight = useRef(false);
   const crushTrigger = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!initialAuthError && !initialGoogleLogin) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("auth");
+    url.searchParams.delete("auth_error");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [initialAuthError, initialGoogleLogin]);
 
   function discoverParams(nextFilters: Filters) {
     const params = new URLSearchParams();
@@ -164,6 +178,7 @@ export function PetApp({
     }
     setTab(next);
     setError("");
+    setNotice("");
     setBusy(true);
     try {
       if (next === "discover") await loadDiscover();
@@ -200,6 +215,7 @@ export function PetApp({
   async function authenticated(viewer: Viewer) {
     setUser(viewer);
     setAuthOpen(false);
+    setAuthError("");
     setError("");
     try {
       const [mine] = await Promise.all([
@@ -253,6 +269,22 @@ export function PetApp({
       setError((error as Error).message);
     } finally {
       setBusy(false);
+    }
+  }
+  function deleted(dog: DogProfile) {
+    const remaining = myDogs.filter((item) => item.id !== dog.id);
+    setMyDogs((previous) => previous.filter((item) => item.id !== dog.id));
+    setMatches((previous) => previous.filter((match) => match.dogA.id !== dog.id && match.dogB.id !== dog.id));
+    setChatMatch((previous) => previous && (previous.dogA.id === dog.id || previous.dogB.id === dog.id) ? null : previous);
+    setDetail((previous) => previous?.id === dog.id ? null : previous);
+    setEditingDog(undefined);
+    setDogFormOpen(false);
+    setError("");
+    setNotice(`O perfil de ${dog.name} foi excluído. Sua conta continua ativa.`);
+    if (activeDogId === dog.id || !remaining.some((item) => item.id === activeDogId)) {
+      setActiveDogId(remaining[0]?.id || "");
+      setLikedDogs([]);
+      if (remaining.length) void selectDog(remaining[0].id);
     }
   }
   async function like(dog: DogProfile): Promise<LikeOutcome> {
@@ -792,6 +824,7 @@ export function PetApp({
           )}
           {tab === "dogs" && (
             <section>
+              {notice && <p className="success-banner" role="status">{notice}</p>}
               <div className="section-heading">
                 <h1>
                   Meus cachorros <span>{myDogs.length}</span>
@@ -961,11 +994,12 @@ export function PetApp({
       </Modal>
       <Modal
         open={authOpen}
-        onClose={() => setAuthOpen(false)}
+        onClose={() => { setAuthOpen(false); setAuthError(""); }}
         title="Oi, que bom ter você aqui!"
         description="Seu cachorro merece um namorinho. Vamos começar?"
       >
         <AuthForm
+          initialError={authError}
           onSuccess={(viewer) =>
             void authenticated(viewer)
           }
@@ -986,6 +1020,7 @@ export function PetApp({
           key={editingDog?.id || "new"}
           dog={editingDog}
           onSaved={(dog) => void saved(dog)}
+          onDeleted={deleted}
         />
       </Modal>
       <Modal

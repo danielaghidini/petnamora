@@ -21,8 +21,10 @@ Abra http://localhost:3003. `db:local` cria `.env` com credenciais aleatórias, 
 ## O que funciona
 
 - Cadastro e login do tutor, senha com bcrypt, sessão revogável no banco e cookie HttpOnly.
+- Login e cadastro com Google, com confirmação de maioridade, seleção de conta e abertura do cadastro do cachorro para tutores sem perfis.
 - Cadastro e edição de até cinco cães por tutor, até 10 fotos JPG/PNG/WebP por cachorro (5 MB cada), seleção múltipla, remoção e escolha da foto principal. O perfil exibe uma galeria com setas e miniaturas. Raça em lista pesquisável com opção “Outros”, sexo, idade em meses, porte, cidade/UF, descrição e informações de saúde declaradas. Fotos e nomes de raças já cadastrados são preservados na edição.
 - Fotos no Cloudflare Images em produção, com entrega pela CDN; armazenamento local para desenvolvimento.
+- Exclusão definitiva pelo próprio tutor em **Meus cachorros → Editar perfil → Excluir cachorro**, com confirmação. Remove o cachorro e suas curtidas, namorinhos, conversas, mensagens e denúncias vinculadas, preservando a conta e os outros cachorros. As fotos entram na mesma fila persistente de limpeza usada pela administração; falhas podem ser repetidas no painel.
 - Busca por cidade e múltiplas raças, com lista pesquisável e opção “Outros” para raças fora da lista; filtros por sexo, porte e pedigree declarado. Descobrir carrega 12 perfis por vez, com botão “Ver mais cachorros” que preserva a busca aplicada.
 - Modo crush no menu superior: um perfil por vez, com arraste à esquerda para passar e à direita para curtir, botões e setas do teclado. Reutiliza os filtros e carrega os próximos perfis automaticamente. As curtidas seguem as regras do aplicativo; passar um perfil vale apenas para a rodada atual.
 - Curtidas entre cães ativos, não castrados, de sexos opostos e tutores diferentes; match somente com reciprocidade.
@@ -42,6 +44,29 @@ Os perfis têm nomes e biografias naturais, dez raças, ambos os sexos, três po
 As senhas aleatórias, os IDs e as fontes das fotos ficam em `.local/profile-seeds/<host>/accounts.json`, ignorado pelo Git. Preserve esse arquivo para entrar nas contas e retomar uma carga interrompida sem duplicar registros. Contas existentes só são acessadas quando a senha do manifesto corresponde; seus perfis não são sobrescritos. Nunca publique o manifesto.
 
 No mesmo diretório, `remove.sql` contém a remoção dos IDs criados para execução manual no banco correspondente. O SQL preserva tutores que passaram a ter outros cachorros; as interações dos perfis removidos seguem os cascades existentes. Fotos enviadas à Cloudflare não são apagadas pelo SQL; as URLs e as fontes ficam no manifesto para limpeza posterior.
+
+## Login com Google
+
+Crie um cliente OAuth do tipo **Aplicativo da Web** para o Pet Namora no [Google Auth Platform](https://console.cloud.google.com/auth/clients). Configure a marca e o público do aplicativo e, enquanto ele estiver em teste, inclua os e-mails permitidos. Cadastre as URLs de redirecionamento exatas dos ambientes utilizados:
+
+- Desenvolvimento: `http://localhost:3003/api/auth/google/callback`
+- Produção: `https://petnamora.com.br/api/auth/google/callback` (ajuste se o domínio público for diferente).
+
+No `.env` local e nas variáveis do serviço `petnamora` no Railway, configure:
+
+```dotenv
+APP_URL=https://petnamora.com.br
+GOOGLE_CLIENT_ID=<ID do cliente OAuth do Pet Namora>
+GOOGLE_CLIENT_SECRET=<segredo do cliente OAuth do Pet Namora>
+```
+
+Localmente, use `APP_URL=http://localhost:3003`. O retorno é calculado a partir de `APP_URL`; `GOOGLE_REDIRECT_URI` é opcional e, se definido, deve corresponder exatamente a essa origem mais `/api/auth/google/callback`. Não use variáveis `NEXT_PUBLIC_` para credenciais. Reinicie o servidor após configurar. Aplique `npm run db:migrate` antes de iniciar a versão nova: a migração adiciona apenas o identificador Google opcional e único, preservando contas e senhas existentes.
+
+O botão solicita somente `openid email profile`. O servidor confere o estado e o PKCE, consulta o perfil diretamente no Google e exige e-mail verificado. A sessão continua no cookie HttpOnly do Pet Namora; tokens Google não são persistidos nem enviados ao navegador pela URL. Consulte o [fluxo OAuth do Google](https://developers.google.com/identity/protocols/oauth2/web-server) e a [documentação OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect).
+
+Contas novas recebem nome e e-mail do Google, sem exigir criação de senha, e nunca recebem permissão administrativa. Nos acessos seguintes, o identificador Google reconhece a conta mesmo se o e-mail do provedor mudar. Para uma conta já cadastrada com senha, o vínculo automático por e-mail ocorre somente quando o Google é responsável por esse endereço (Gmail ou Google Workspace). Em endereços de outros provedores, o usuário é orientado a entrar com a senha existente, evitando vincular contas apenas pela coincidência de um e-mail externo. Suspensões também impedem o login Google.
+
+Sem as credenciais, o botão informa que a integração ainda precisa ser configurada, e o acesso por e-mail e senha continua disponível. `npm run test:auth`, após o build, verifica o fluxo HTTP com Google simulado e schema PostgreSQL isolado, sem contas ou serviços Google reais.
 
 ## Administração
 
@@ -63,7 +88,7 @@ As fotos de capa e das galerias entram em uma fila persistente na mesma transaç
 
 Suspender uma conta revoga suas sessões e impede login, descoberta e interações de seus perfis. Bloquear um cachorro impede descoberta, curtidas e conversas; o bloqueio permanece mesmo que a família edite o cadastro. Reativar a conta não remove bloqueios individuais. Concluir ou arquivar uma denúncia não altera automaticamente o bloqueio global nem remove a proteção pessoal do denunciante.
 
-Após `npm run build`, `npm run test:admin` inicia uma instância temporária do Next.js com schema PostgreSQL isolado e verifica permissões, moderação e histórico via HTTP. Os cenários são apagados ao terminar e não usam contas reais.
+Após `npm run build`, `npm run test:admin` inicia uma instância temporária do Next.js com schema PostgreSQL isolado e verifica permissões, moderação, histórico e exclusão de cachorros pelo tutor via HTTP, incluindo cascatas, preservação da conta e fotos compartilhadas, exclusão do último cachorro e falhas de armazenamento. Os cenários são apagados ao terminar e não usam contas reais.
 
 ## Estrutura
 
@@ -98,7 +123,7 @@ O teste de migração usa o PostgreSQL configurado em `DATABASE_URL`, cria cená
 
 ## Limites desta versão
 
-Sem cobrança, recuperação de senha, verificação de e-mail, verificação documental, notificações e geolocalização por raio. Saúde e pedigree são autodeclarados, sem selo de certificação. O app não avalia aptidão veterinária para reprodução. Curtidas e conexões são limitadas a 100 registros.
+Sem cobrança, recuperação de senha, verificação de e-mail no cadastro por senha, verificação documental, notificações e geolocalização por raio. Saúde e pedigree são autodeclarados, sem selo de certificação. O app não avalia aptidão veterinária para reprodução. Curtidas e conexões são limitadas a 100 registros.
 
 O limitador de login é por e-mail e processo; substitua por proteção compartilhada por conta/IP antes de escalar ou abrir ao público. A validação de upload confere assinatura binária e tamanho e deve evoluir para decodificação/normalização e cotas. As sessões expiradas e fotos órfãs (inclusive uploads abandonados na Cloudflare) precisam de limpeza periódica. Defina política de privacidade, exclusão/exportação de dados e uma rotina de análise de denúncias antes de lançamento público.
 

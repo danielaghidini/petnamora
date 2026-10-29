@@ -5,7 +5,7 @@ import { deleteCloudflarePhoto } from "@/lib/cloudflare-images";
 import { cloudflarePhotoIdFromUrl, isPhotoUrl } from "@/lib/photo-urls";
 import { uploadDirectory } from "@/lib/photos";
 
-export async function cleanDeletedAccountPhotos() {
+export async function cleanDeletedPhotos() {
   const jobs = await db.photoDeletion.findMany({ orderBy: { createdAt: "asc" }, take: 50 });
   // Bound the request duration even when storage is unavailable.
   for (let offset = 0; offset < jobs.length; offset += 10) {

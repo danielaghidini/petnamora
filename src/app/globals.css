@@ -2106,6 +2106,20 @@ h1 {
   border-radius: 6px;
   line-height: 1.7;
 }
+.dog-delete-section {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 8px;
+}
+.danger-button { color: var(--error-text); }
+.danger-button:hover:not(:disabled) { background: var(--error-surface); }
+.success-banner {
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  color: var(--success-text);
+  background: var(--success-surface);
+}
 .form-intro {
   text-align: center;
   font-size: var(--font-size-body);
@@ -2118,6 +2132,27 @@ h1 {
   max-width: 100%;
   height: auto;
   margin: 0 auto;
+}
+.google-auth-button {
+  min-height: 48px;
+  color: var(--ink);
+}
+.google-auth-button svg {
+  flex-shrink: 0;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
 }
 .segmented {
   display: flex;

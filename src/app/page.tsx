@@ -2,8 +2,12 @@ import { currentUser } from "@/lib/auth";
 import { allowedDog, discover, publicDogFields } from "@/features/dogs/service";
 import { db } from "@/lib/prisma";
 import { PetApp } from "@/features/dogs/pet-app";
+import { googleAuthErrorMessage } from "@/lib/google-auth-messages";
 export const dynamic = "force-dynamic";
-export default async function Home() {
+export default async function Home({ searchParams }: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
   const user = await currentUser();
   const [discovery, myDogs] = await Promise.all([
     discover(new URLSearchParams(), user?.id),
@@ -31,6 +35,8 @@ export default async function Home() {
       initialUser={user}
       initialMyDogs={myDogs}
       initialLikedDogs={likes.map((like) => like.to)}
+      initialAuthError={googleAuthErrorMessage(typeof params.auth_error === "string" ? params.auth_error : undefined)}
+      initialGoogleLogin={params.auth === "google"}
     />
   );
 }

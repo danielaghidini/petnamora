@@ -284,6 +284,85 @@ test("admin permissions, moderation and audit through HTTP", { timeout: 120000 }
       assert.equal((await retried.json()).notice, "Limpeza de fotos concluída.");
       assert.equal(await db.photoDeletion.count(), 0);
     });
+    await t.test("owners delete a single dog with cascades, keeping their account, other dogs and shared photos", async () => {
+      const owner = await db.user.create({ data: { name: "Dog owner", email: "dog-owner@verification.invalid", passwordHash } });
+      const cookie = await login(owner.email);
+      const imageId = `petnamora/${randomUUID()}`;
+      const sharedId = `petnamora/${randomUUID()}`;
+      const photo = (id) => `https://imagedelivery.net/test-hash/${id}/public`;
+      const localName = `${randomUUID()}.png`;
+      await writeFile(path.join(uploads, localName), "dog photo");
+      const [target, kept] = await Promise.all([
+        db.dog.create({ data: { ...dogInput, ownerId: owner.id, blockedAt: new Date(), photoUrl: photo(imageId),
+          photoUrls: [photo(imageId), photo(sharedId), `/api/photos/${localName}`] } }),
+        db.dog.create({ data: { ...dogInput, ownerId: owner.id, photoUrl: photo(sharedId), photoUrls: [photo(sharedId)] } }),
+      ]);
+      const likes = await Promise.all([
+        db.like.create({ data: { fromId: target.id, toId: dogA.id } }),
+        db.like.create({ data: { fromId: dogA.id, toId: target.id } }),
+      ]);
+      const conversations = await Promise.all([true, false].map((isMatch) => db.match.create({ data: {
+        dogAId: isMatch ? target.id : dogA.id, dogBId: isMatch ? dogA.id : target.id, isMatch,
+        messages: { create: { senderId: owner.id, text: "Mensagem vinculada ao cachorro" } },
+      } })));
+      const report = await db.report.create({ data: { reporterId: first.id, dogId: target.id, reason: "Relato de teste" } });
+      const body = { id: target.id };
+      const deletion = { method: "DELETE", body };
+      const imagesBefore = imageRequests.length;
+      assert.equal((await request("/api/dogs", deletion)).status, 401);
+      assert.equal((await request("/api/dogs", { ...deletion, cookie: firstCookie })).status, 404);
+      assert.equal((await request("/api/dogs", { ...deletion, cookie: adminCookie })).status, 404);
+      assert.equal((await request("/api/dogs", { ...deletion, cookie, requestOrigin: "https://other.invalid" })).status, 403);
+      for (const invalid of [null, {}, { id: "" }, { id: 12 }, { id: target.id, ownerId: owner.id }]) {
+        const response = await fetch(`${origin}/api/dogs`, { method: "DELETE", headers: {
+          "Content-Type": "application/json", Origin: origin, Cookie: cookie,
+        }, body: JSON.stringify(invalid) });
+        assert.equal(response.status, 400);
+      }
+      assert.ok(await db.dog.findUnique({ where: { id: target.id } }));
+      assert.equal(await db.photoDeletion.count(), 0);
+      assert.equal(imageRequests.length, imagesBefore);
+      const response = await request("/api/dogs", { ...deletion, cookie });
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { ok: true });
+      assert.equal(await db.dog.findUnique({ where: { id: target.id } }), null);
+      assert.equal(await db.like.count({ where: { id: { in: likes.map((like) => like.id) } } }), 0);
+      assert.equal(await db.match.count({ where: { id: { in: conversations.map((match) => match.id) } } }), 0);
+      assert.equal(await db.message.count({ where: { matchId: { in: conversations.map((match) => match.id) } } }), 0);
+      assert.equal(await db.report.findUnique({ where: { id: report.id } }), null);
+      assert.ok(await db.user.findUnique({ where: { id: owner.id } }));
+      assert.ok(await db.session.findFirst({ where: { userId: owner.id } }));
+      assert.ok(await db.dog.findUnique({ where: { id: dogA.id } }));
+      assert.deepEqual(imageRequests.slice(imagesBefore), [{ imageId, method: "DELETE", authorization: "Bearer test-token" }]);
+      await assert.rejects(access(path.join(uploads, localName)), { code: "ENOENT" });
+      assert.equal(await db.photoDeletion.count(), 0);
+      assert.deepEqual((await (await request("/api/dogs?mine=true", { cookie })).json()).dogs.map((dog) => dog.id), [kept.id]);
+      assert.equal((await request("/api/dogs", { ...deletion, cookie })).status, 404);
+      assert.equal((await request("/api/dogs", { method: "PATCH", cookie, body: { ...dogInput, id: target.id } })).status, 404);
+
+      // Removing the last dog keeps the session usable and permits a new profile.
+      assert.equal((await request("/api/dogs", { method: "DELETE", cookie, body: { id: kept.id } })).status, 200);
+      assert.deepEqual((await (await request("/api/dogs?mine=true", { cookie })).json()).dogs, []);
+      assert.equal((await (await request("/api/auth", { cookie })).json()).user.id, owner.id);
+      assert.ok(imageRequests.some((item) => item.imageId === sharedId));
+      assert.equal((await request("/api/dogs", { cookie, body: dogInput })).status, 201);
+    });
+    await t.test("photo provider failures do not undo dog deletion and remain retryable", async () => {
+      const owner = await db.user.create({ data: { name: "Dog retry", email: "dog-retry@verification.invalid", passwordHash } });
+      const cookie = await login(owner.email);
+      const imageId = `petnamora/${randomUUID()}`;
+      const photoUrl = `https://imagedelivery.net/test-hash/${imageId}/public`;
+      const dog = await db.dog.create({ data: { ...dogInput, ownerId: owner.id, photoUrl } });
+      failedImages.add(imageId);
+      const response = await request("/api/dogs", { method: "DELETE", cookie, body: { id: dog.id } });
+      assert.equal(response.status, 200);
+      assert.equal(await db.dog.findUnique({ where: { id: dog.id } }), null);
+      assert.equal(await db.photoDeletion.count({ where: { url: photoUrl } }), 1);
+      failedImages.delete(imageId);
+      assert.equal((await request("/api/admin", { cookie: adminCookie, body: { kind: "photo-cleanup", reason: "Limpar foto do cachorro excluído" } })).status, 200);
+      assert.equal(await db.photoDeletion.count(), 0);
+      assert.ok(removedImages.has(imageId));
+    });
     await t.test("empty accounts can be deleted but former admins with audit records are preserved", async () => {
       const empty = await db.user.create({ data: { name: "Empty", email: "empty@admin-verification.invalid", passwordHash } });
       const deletion = { kind: "user-delete", id: empty.id, expected: false, reason: "Excluir cadastro sem cachorros" };
@@ -533,6 +612,8 @@ test("admin permissions, moderation and audit through HTTP", { timeout: 120000 }
     }
     await db.$disconnect();
     await new Promise((resolve) => imageServer.close(resolve));
+    assert.equal(path.dirname(path.resolve(uploads)), path.resolve(tmpdir()));
+    assert.ok(path.basename(uploads).startsWith("petnamora-admin-"));
     await rm(uploads, { recursive: true, force: true });
     // Only the random schema created by this test is removed.
     await rootDb.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
