@@ -173,10 +173,12 @@ export function DogForm({
   dog,
   onSaved,
   onDeleted,
+  onLater,
 }: {
   dog?: DogProfile;
   onSaved: (dog: DogProfile) => void;
   onDeleted: (dog: DogProfile) => void;
+  onLater: () => void;
 }) {
   const [photos, setPhotos] = useState(() => dog ? dogPhotos(dog) : []);
   const [uploading, setUploading] = useState(false);
@@ -447,6 +449,11 @@ export function DogForm({
             ? "Salvar alterações"
             : "Criar perfil do meu cachorro"}
       </button>
+      {!dog && (
+        <button type="button" className="secondary-button" onClick={onLater} disabled={busy || uploading}>
+          Cadastrar mais tarde
+        </button>
+      )}
       {dog && (
         <div className="dog-delete-section">
           <button type="button" className="secondary-button danger-button" disabled={busy || uploading}

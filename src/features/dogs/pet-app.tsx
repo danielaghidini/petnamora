@@ -1014,9 +1014,12 @@ export function PetApp({
         title={
           editingDog
             ? `O perfil de ${editingDog.name}`
-            : "Quem é esse amor de quatro patas?"
+            : "Cadastre seu pet"
         }
-        description="Fotos fofas e o jeitinho dele ajudam o crush a chegar."
+        description={editingDog
+          ? "Fotos fofas e o jeitinho dele ajudam o crush a chegar."
+          : "Você pode cadastrar mais de um pet na mesma conta. Crie um perfil para cada um."
+        }
         wide
       >
         <DogForm
@@ -1024,6 +1027,7 @@ export function PetApp({
           dog={editingDog}
           onSaved={(dog) => void saved(dog)}
           onDeleted={deleted}
+          onLater={() => setDogFormOpen(false)}
         />
       </Modal>
       <Modal
@@ -1036,15 +1040,15 @@ export function PetApp({
             <p className="detail-name">
               {detail.name} <span>{detail.sex === "MALE" ? <Mars size={24} strokeWidth={3} aria-label="Macho" /> : <Venus size={24} strokeWidth={3} aria-label="Fêmea" />}</span>
             </p>
-            <p className="dog-location">
-              <MapPin size={14} />
-              {detail.city}, {detail.state}
-            </p>
             <div className="detail-facts">
               <span>{ageLabel(detail.ageMonths)}</span>
               <span>Porte {detail.size.toLowerCase()}</span>
               <span>{detail.sex === "MALE" ? "Macho" : "Fêmea"}</span>
             </div>
+            <p className="dog-location">
+              <MapPin size={14} />
+              {detail.city}, {detail.state}
+            </p>
           </div>
         )}
         wide
