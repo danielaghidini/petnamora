@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   ArrowRight,
   BadgeCheck,
@@ -12,6 +13,7 @@ import {
   ListFilter,
   LogOut,
   MapPin,
+  Menu,
   MessageCircle,
   PawPrint,
   Plus,
@@ -96,6 +98,7 @@ export function PetApp({
   const [chatMatch, setChatMatch] = useState<MatchProfile | null>(null);
   const [reportDog, setReportDog] = useState<DogProfile | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -462,15 +465,90 @@ export function PetApp({
       </aside>
       <div className="main-shell">
         <header className="topbar">
+          <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
+            <Dialog.Trigger asChild>
+              <button type="button" className="icon-button mobile-menu-trigger" aria-label="Abrir menu">
+                <Menu size={23} aria-hidden="true" />
+              </button>
+            </Dialog.Trigger>
+            <Dialog.Portal>
+              <Dialog.Overlay className="modal-overlay mobile-menu-overlay" />
+              <Dialog.Content className="mobile-menu-panel">
+                <div className="mobile-menu-heading">
+                  <Dialog.Title>Meu perfil</Dialog.Title>
+                  <Dialog.Close className="icon-button" aria-label="Fechar menu">
+                    <X size={21} aria-hidden="true" />
+                  </Dialog.Close>
+                </div>
+                <Dialog.Description className="sr-only">
+                  Sua conta, navegação e preferências do Pet Namora.
+                </Dialog.Description>
+                <div className="mobile-menu-profile">
+                  <span className="avatar" aria-hidden="true">
+                    {user ? user.name[0].toUpperCase() : <PawPrint size={24} />}
+                  </span>
+                  <div>
+                    <strong>{user?.name || "Oi, que bom te ver!"}</strong>
+                    <span>{user?.email || "Entre para apresentar seu cachorro."}</span>
+                  </div>
+                </div>
+                {!user && (
+                  <button type="button" className="primary-button" onClick={() => {
+                    setMenuOpen(false);
+                    setAuthOpen(true);
+                  }}>
+                    Entrar ou criar conta
+                  </button>
+                )}
+                <nav className="side-nav" aria-label="Menu principal móvel">
+                  {navigation.map((item) => (
+                    <button key={item.id} type="button"
+                      className={cn("nav-item", tab === item.id && "active")}
+                      aria-current={tab === item.id ? "page" : undefined}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        void navigate(item.id);
+                      }}>
+                      <item.icon size={20} aria-hidden="true" />
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                  {user?.isAdmin && (
+                    <Link href="/admin" className="nav-item" onClick={() => setMenuOpen(false)}>
+                      <ShieldCheck size={20} aria-hidden="true" /> Administração
+                    </Link>
+                  )}
+                  <button type="button" className="nav-item" onClick={() => {
+                    setMenuOpen(false);
+                    setGuideOpen(true);
+                  }}>
+                    <ShieldCheck size={20} aria-hidden="true" /> Cuidados e segurança
+                  </button>
+                </nav>
+                <div className="mobile-menu-preferences">
+                  <span>Aparência</span>
+                  <ThemeSelector />
+                </div>
+                {user && (
+                  <button type="button" className="nav-item mobile-menu-logout" onClick={() => {
+                    setMenuOpen(false);
+                    void logout();
+                  }}>
+                    <LogOut size={20} aria-hidden="true" /> Sair da conta
+                  </button>
+                )}
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
           <Link href="/" className="mobile-brand" aria-label="Pet Namora, início">
             <img src="/icon.svg" alt="Pet Namora" width={44} height={44} />
           </Link>
           <nav className="discovery-switch" aria-label="Modos de descobrir">
-            <button type="button" aria-pressed={tab === "discover" && discoverMode === "grid"} onClick={() => chooseDiscoverMode("grid")}>
-              <Search size={17} /> Explorar
+            <button type="button" aria-label="Explorar" title="Explorar" aria-pressed={tab === "discover" && discoverMode === "grid"} onClick={() => chooseDiscoverMode("grid")}>
+              <Search size={19} aria-hidden="true" /> <span>Explorar</span>
             </button>
-            <button type="button" aria-pressed={tab === "discover" && discoverMode === "swipe"} onClick={() => chooseDiscoverMode("swipe")}>
-              <Heart size={17} /> Modo crush
+            <button type="button" aria-label="Modo crush" title="Modo crush" aria-pressed={tab === "discover" && discoverMode === "swipe"} onClick={() => chooseDiscoverMode("swipe")}>
+              <Heart size={19} aria-hidden="true" /> <span>Modo crush</span>
             </button>
           </nav>
           <div className="topbar-right">
@@ -480,10 +558,9 @@ export function PetApp({
               </Link>
             )}
             <ThemeSelector />
-            <button className="primary-button topbar-cta" onClick={addDog} aria-label="Cadastrar meu cachorro">
-              <Plus size={17} />
+            <button className="primary-button topbar-cta" onClick={addDog} aria-label="Cadastrar meu cachorro" title="Cadastrar meu cachorro">
+              <Plus size={19} aria-hidden="true" />
               <span className="topbar-cta-label">Cadastrar meu cachorro</span>
-              <span className="topbar-cta-short-label" aria-hidden="true">Cadastrar</span>
             </button>
           </div>
         </header>
@@ -939,26 +1016,6 @@ export function PetApp({
           </footer>
         </main>
       </div>
-      <nav className="mobile-nav" aria-label="Navegação móvel">
-        {navigation.map((item) => (
-          <button
-            key={item.id}
-            className={tab === item.id ? "active" : ""}
-            onClick={() => void navigate(item.id)}
-          >
-            <item.icon size={21} />
-            <span>
-              {item.id === "matches"
-                ? "Papos"
-                : item.id === "likes"
-                  ? "Curtidas"
-                  : item.id === "dogs"
-                    ? "Cachorros"
-                    : item.label}
-            </span>
-          </button>
-        ))}
-      </nav>
 
       <Modal
         open={authOpen}

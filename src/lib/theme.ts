@@ -1,5 +1,5 @@
 export type Theme = "light" | "dark";
-export const DEFAULT_THEME: Theme = "dark";
+export const DEFAULT_THEME: Theme = "light";
 
 const STORAGE_KEY = "petnamora:theme";
 const CHANGE_EVENT = "petnamora:theme-change";
@@ -16,9 +16,8 @@ export const themeInitializationScript = `(() => {
 })();`;
 
 export function getTheme(): Theme {
-  return document.documentElement.dataset.theme === "light"
-    ? "light"
-    : DEFAULT_THEME;
+  const theme = document.documentElement.dataset.theme;
+  return theme === "light" || theme === "dark" ? theme : DEFAULT_THEME;
 }
 
 export function getServerTheme(): Theme {
