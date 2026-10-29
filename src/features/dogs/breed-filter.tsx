@@ -73,7 +73,6 @@ export function BreedFilter({
         aria-labelledby={`${id}-label ${id}-summary`}
         aria-expanded={open}
         aria-controls={`${id}-panel`}
-        title={summary}
         onClick={() => {
           if (open) close();
           else setOpen(true);

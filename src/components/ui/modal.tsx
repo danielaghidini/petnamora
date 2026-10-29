@@ -7,6 +7,8 @@ export function Modal({
   onClose,
   title,
   description,
+  header,
+  hideHeading = false,
   children,
   wide = false,
 }: {
@@ -14,6 +16,8 @@ export function Modal({
   onClose: () => void;
   title: string;
   description?: string;
+  header?: ReactNode;
+  hideHeading?: boolean;
   children: ReactNode;
   wide?: boolean;
 }) {
@@ -27,18 +31,19 @@ export function Modal({
       <Dialog.Portal>
         <Dialog.Overlay className="modal-overlay" />
         <Dialog.Content className={`modal ${wide ? "modal-wide" : ""}`}>
-          <div className="modal-heading">
+          <div className={hideHeading ? "sr-only" : "modal-heading"}>
             <div>
-              <Dialog.Title>{title}</Dialog.Title>
+              <Dialog.Title className={header ? "sr-only" : undefined}>{title}</Dialog.Title>
+              {header}
               <Dialog.Description
                 className={description ? "modal-description" : "sr-only"}
               >
                 {description || title}
               </Dialog.Description>
             </div>
-            <Dialog.Close className="icon-button" aria-label="Fechar">
+            {!hideHeading && <Dialog.Close className="icon-button" aria-label="Fechar">
               <X size={20} />
-            </Dialog.Close>
+            </Dialog.Close>}
           </div>
           {children}
         </Dialog.Content>

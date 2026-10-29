@@ -9,16 +9,17 @@ import {
   Compass,
   Flag,
   Heart,
-  LayoutGrid,
   ListFilter,
   LogOut,
   MapPin,
+  Mars,
   Menu,
   MessageCircle,
   PawPrint,
   Plus,
   Search,
   ShieldCheck,
+  Venus,
   X,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
@@ -32,6 +33,7 @@ import { PhotoGallery } from "./photo-gallery";
 import { Chat } from "./chat";
 import { BreedFilter } from "./breed-filter";
 import { SwipeDiscover } from "./swipe-discover";
+import { ActiveDogPicker } from "./active-dog-picker";
 import type { LikeOutcome } from "./swipe";
 import {
   ageLabel,
@@ -59,7 +61,7 @@ const emptyFilters: Filters = {
 const navigation = [
   { id: "discover", label: "Descobrir", icon: Compass },
   { id: "likes", label: "Minhas curtidas", icon: Heart },
-  { id: "matches", label: "Namorinhos e papos", icon: MessageCircle },
+  { id: "matches", label: "Minhas conversas", icon: MessageCircle },
   { id: "dogs", label: "Meus cachorros", icon: PawPrint },
 ] as const;
 
@@ -85,8 +87,7 @@ export function PetApp({
   const [myDogs, setMyDogs] = useState(initialMyDogs);
   const [activeDogId, setActiveDogId] = useState(initialMyDogs[0]?.id || "");
   const [tab, setTab] = useState<Tab>("discover");
-  const [discoverMode, setDiscoverMode] = useState<"grid" | "swipe">("grid");
-  const [swipeFiltersOpen, setSwipeFiltersOpen] = useState(false);
+  const [crushOpen, setCrushOpen] = useState(false);
   const [likedDogs, setLikedDogs] = useState<DogProfile[]>(initialLikedDogs);
   const [matches, setMatches] = useState<MatchProfile[]>([]);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
@@ -99,14 +100,13 @@ export function PetApp({
   const [reportDog, setReportDog] = useState<DogProfile | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [likingId, setLikingId] = useState("");
   const [messagingId, setMessagingId] = useState("");
   const conversationInFlight = useRef(false);
   const likeInFlight = useRef(false);
-  const searchPanel = useRef<HTMLFormElement>(null);
+  const crushTrigger = useRef<HTMLButtonElement>(null);
 
   function discoverParams(nextFilters: Filters) {
     const params = new URLSearchParams();
@@ -197,15 +197,10 @@ export function PetApp({
     setEditingDog(undefined);
     setDogFormOpen(true);
   }
-  async function authenticated(viewer: Viewer, registered: boolean) {
+  async function authenticated(viewer: Viewer) {
     setUser(viewer);
     setAuthOpen(false);
     setError("");
-    setNotice(
-      registered
-        ? "Oba, você chegou! Agora falta apresentar seu cachorro."
-        : `Que bom te ver, ${viewer.name.split(" ")[0]}!`,
-    );
     try {
       const [mine] = await Promise.all([
         api<{ dogs: DogProfile[] }>("/api/dogs?mine=true"),
@@ -236,7 +231,6 @@ export function PetApp({
     );
     setActiveDogId(dog.id);
     setDogFormOpen(false);
-    setNotice(`Prontinho! O perfil de ${dog.name} ficou um charme.`);
     try {
       await Promise.all([loadDiscover(), selectDog(dog.id)]);
     } catch (error) {
@@ -287,11 +281,6 @@ export function PetApp({
         ...previous.filter((item) => item.id !== dog.id),
         dog,
       ]);
-      setNotice(
-        result.matched
-          ? `Deu namorinho com ${dog.name}! Passe em Namorinhos e papos pra dar um oi.`
-          : `Coraçãozinho enviado para ${dog.name}! Se vier outro de volta, vocês já podem bater um papo.`,
-      );
       return result.matched ? "matched" : "liked";
     } catch (error) {
       setError((error as Error).message);
@@ -329,7 +318,6 @@ export function PetApp({
     try {
       await loadDiscover(filters);
       setFiltersOpen(false);
-      setSwipeFiltersOpen(false);
     } catch (error) {
       setError((error as Error).message);
     } finally {
@@ -369,9 +357,6 @@ export function PetApp({
       setDogs((previous) => previous.filter((dog) => dog.id !== reportDog.id));
       setReportDog(null);
       setDetail(null);
-      setNotice(
-        "Denúncia registrada. Esse perfil foi ocultado para você e a conversa foi bloqueada.",
-      );
     } catch (error) {
       setError((error as Error).message);
     } finally {
@@ -382,23 +367,15 @@ export function PetApp({
   const activeFilterCount = appliedFilters.breeds.length +
     [appliedFilters.city, appliedFilters.sex, appliedFilters.size, appliedFilters.pedigree].filter(Boolean).length;
   const activeDog = myDogs.find((dog) => dog.id === activeDogId) ?? myDogs[0];
-  const activeDogPicker = user && myDogs.length > 1 ? (
-    <label className="active-dog-picker">
-      Mandar um coração em nome de:
-      <Select
-        label="Mandar um coração em nome de"
-        value={activeDogId}
-        disabled={busy || !!likingId || !!messagingId}
-        onValueChange={(dogId) => void selectDog(dogId)}
-        options={myDogs.map((dog) => ({ value: dog.id, label: dog.name }))}
-      />
-    </label>
+  const activeDogPicker = user ? (
+    <ActiveDogPicker
+      dogs={myDogs}
+      activeDog={activeDog}
+      disabled={busy || !!likingId || !!messagingId}
+      onSelect={(dogId) => void selectDog(dogId)}
+      onAdd={addDog}
+    />
   ) : null;
-  function chooseDiscoverMode(mode: "grid" | "swipe") {
-    setDiscoverMode(mode);
-    if (tab !== "discover") void navigate("discover");
-  }
-
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -429,16 +406,7 @@ export function PetApp({
             </Link>
           )}
         </nav>
-        <div className="sidebar-guide">
-          <div className="guide-icon">
-            <ShieldCheck size={23} />
-          </div>
-          <h3>Carinho em cada patinha.</h3>
-          <p>Cachorro feliz vem primeiro. Sempre.</p>
-          <button type="button" className="secondary-button" onClick={() => setGuideOpen(true)}>
-            Saiba mais
-          </button>
-        </div>
+        {activeDogPicker}
         <div className="sidebar-bottom">
           <div className="sidebar-user">
             <span className="avatar">
@@ -455,7 +423,6 @@ export function PetApp({
                 className="icon-button sidebar-logout"
                 onClick={() => void logout()}
                 aria-label="Sair"
-                title="Sair da conta"
               >
                 <LogOut size={18} />
               </button>
@@ -465,6 +432,9 @@ export function PetApp({
       </aside>
       <div className="main-shell">
         <header className="topbar">
+          <Link href="/" className="mobile-brand" aria-label="Pet Namora, início">
+            <img src="/brand/petnamora-logo-02.png" alt="Pet Namora" width={2172} height={724} />
+          </Link>
           <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
             <Dialog.Trigger asChild>
               <button type="button" className="icon-button mobile-menu-trigger" aria-label="Abrir menu">
@@ -525,6 +495,7 @@ export function PetApp({
                     <ShieldCheck size={20} aria-hidden="true" /> Cuidados e segurança
                   </button>
                 </nav>
+                {activeDogPicker}
                 <div className="mobile-menu-preferences">
                   <span>Aparência</span>
                   <ThemeSelector />
@@ -540,26 +511,20 @@ export function PetApp({
               </Dialog.Content>
             </Dialog.Portal>
           </Dialog.Root>
-          <Link href="/" className="mobile-brand" aria-label="Pet Namora, início">
-            <img src="/icon.svg" alt="Pet Namora" width={44} height={44} />
-          </Link>
-          <nav className="discovery-switch" aria-label="Modos de descobrir">
-            <button type="button" aria-label="Explorar" title="Explorar" aria-pressed={tab === "discover" && discoverMode === "grid"} onClick={() => chooseDiscoverMode("grid")}>
-              <Search size={19} aria-hidden="true" /> <span>Explorar</span>
-            </button>
-            <button type="button" aria-label="Modo crush" title="Modo crush" aria-pressed={tab === "discover" && discoverMode === "swipe"} onClick={() => chooseDiscoverMode("swipe")}>
-              <Heart size={19} aria-hidden="true" /> <span>Modo crush</span>
-            </button>
-          </nav>
+          <div className="topbar-theme">
+            <ThemeSelector />
+          </div>
           <div className="topbar-right">
             {user?.isAdmin && (
               <Link href="/admin" className="icon-button" aria-label="Abrir administração">
                 <ShieldCheck size={20} />
               </Link>
             )}
-            <ThemeSelector />
-            <button className="primary-button topbar-cta" onClick={addDog} aria-label="Cadastrar meu cachorro" title="Cadastrar meu cachorro">
-              <Plus size={19} aria-hidden="true" />
+            <button ref={crushTrigger} type="button" className="primary-button crush-button" aria-label="Modo crush" aria-haspopup="dialog" aria-expanded={crushOpen} onClick={() => setCrushOpen(true)}>
+              <Heart size={19} aria-hidden="true" /> <span>Modo crush</span>
+            </button>
+            <button className="primary-button topbar-cta" onClick={addDog} aria-label="Cadastrar meu cachorro">
+              <PawPrint size={19} aria-hidden="true" />
               <span className="topbar-cta-label">Cadastrar meu cachorro</span>
             </button>
           </div>
@@ -568,10 +533,7 @@ export function PetApp({
           {tab === "matches" && (
             <div className="page-heading">
               <div>
-                <div className="eyebrow">
-                  <span /> UM BOM PAPO COMEÇA COM UM OI
-                </div>
-                <h1>Namorinhos e papos</h1>
+                <h1>Minhas conversas</h1>
                 <p>
                   Suas conversas e as trocas de corações ficam todas por aqui.
                 </p>
@@ -582,20 +544,7 @@ export function PetApp({
               </span>
             </div>
           )}
-          {notice && (
-            <div className="notice" role="status">
-              <Heart size={18} />
-              <span>{notice}</span>
-              <button
-                className="icon-button"
-                onClick={() => setNotice("")}
-                aria-label="Dispensar aviso"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          )}
-          {error && (
+          {error && !crushOpen && (
             <div className="error-banner" role="alert">
               <span>{error}</span>
               <button
@@ -609,7 +558,6 @@ export function PetApp({
           )}
           {tab === "discover" && (
             <>
-              {discoverMode === "grid" ? (
               <section className="hero-banner">
                 <div className="hero-copy">
                   <h2>
@@ -622,7 +570,7 @@ export function PetApp({
                     encontro.
                   </p>
                   <button onClick={addDog}>
-                    Cadastrar <ArrowRight size={16} />
+                    Cadastrar meu cachorro <ArrowRight size={16} />
                   </button>
                 </div>
                 <div className="hero-art">
@@ -633,20 +581,7 @@ export function PetApp({
                 </div>
                 <PawPrint className="hero-paw" size={120} />
               </section>
-              ) : (
-                <div className="swipe-heading">
-                  <div>
-                  <h1>Um deslize, um novo crush.</h1>
-                  <p>Um focinho de cada vez. Passe para a esquerda ou mande um coração para a direita.</p>
-                  </div>
-                  <button type="button" className="secondary-button" aria-expanded={swipeFiltersOpen}
-                    onClick={() => setSwipeFiltersOpen((previous) => !previous)}>
-                    <ListFilter size={17} /> Ajustar busca{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
-                  </button>
-                </div>
-              )}
-              {(discoverMode === "grid" || swipeFiltersOpen) && (
-              <form ref={searchPanel} className="search-panel" onSubmit={filter}>
+              <form className="search-panel" onSubmit={filter}>
                 <BreedFilter
                   value={filters.breeds}
                   onChange={(breeds) => setFilters((previous) => ({ ...previous, breeds }))}
@@ -745,32 +680,9 @@ export function PetApp({
                   </div>
                 )}
               </form>
-              )}
             </>
           )}
-          {tab === "discover" && discoverMode === "swipe" && (
-            <SwipeDiscover
-              key={`${activeDogId}:${JSON.stringify(appliedFilters)}`}
-              dogs={dogs}
-              likedDogs={likedDogs}
-              activeDog={activeDog}
-              dogPicker={activeDogPicker}
-              busy={busy}
-              loadingMore={loadingMore}
-              nextCursor={nextCursor}
-              loadMoreError={loadMoreError}
-              onLoadMore={loadMore}
-              onLike={like}
-              onOpen={setDetail}
-              onEditFilters={() => {
-                setSwipeFiltersOpen(true);
-                setFiltersOpen(true);
-                requestAnimationFrame(() => searchPanel.current?.scrollIntoView({ block: "center" }));
-              }}
-              onManageDogs={() => void navigate("dogs")}
-            />
-          )}
-          {((tab === "discover" && discoverMode === "grid") || tab === "likes") && (
+          {(tab === "discover" || tab === "likes") && (
             <section>
               <div className="section-heading">
                 <div>
@@ -787,19 +699,17 @@ export function PetApp({
                     </p>
                   )}
                 </div>
-                <div className="view-label">
-                  <LayoutGrid size={16} /> Perfis
-                  {activeFilterCount > 0 && (
+                {activeFilterCount > 0 && (
+                  <div className="view-label">
                     <button
                       className="text-button"
                       onClick={() => void clearFilters()}
                     >
                       Limpar busca
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
-              {activeDogPicker}
               {busy ? (
                 <div className="empty-state">
                   <div className="loading-paw">♡</div>
@@ -811,13 +721,14 @@ export function PetApp({
                     <DogCard
                       key={dog.id}
                       dog={dog}
-                      liked={likedDogs.some((item) => item.id === dog.id)}
-                      busy={likingId === dog.id}
-                      onLike={() => void like(dog)}
                       onOpen={() => setDetail(dog)}
-                      onMessage={tab === "discover" ? () => void message(dog) : undefined}
+                      onMessage={() => void message(dog)}
                       messageBusy={messagingId === dog.id}
                       messageDisabled={!!messagingId}
+                      onLike={() => void like(dog)}
+                      liked={likedDogs.some((item) => item.id === dog.id)}
+                      likeBusy={likingId === dog.id}
+                      likeDisabled={!!likingId}
                     />
                   ))}
                 </div>
@@ -895,11 +806,6 @@ export function PetApp({
                     <div key={dog.id} className="own-dog">
                       <DogCard
                         dog={dog}
-                        liked={false}
-                        onLike={() => {
-                          setEditingDog(dog);
-                          setDogFormOpen(true);
-                        }}
                         onOpen={() => {
                           setEditingDog(dog);
                           setDogFormOpen(true);
@@ -979,7 +885,7 @@ export function PetApp({
                   </p>
                   <button
                     className="primary-button"
-                    onClick={() => chooseDiscoverMode("grid")}
+                    onClick={() => void navigate("discover")}
                   >
                     Explorar perfis
                   </button>
@@ -1018,14 +924,50 @@ export function PetApp({
       </div>
 
       <Modal
+        open={crushOpen}
+        onClose={() => {
+          setCrushOpen(false);
+          requestAnimationFrame(() => crushTrigger.current?.focus({ preventScroll: true }));
+        }}
+        title="Modo crush"
+        description="Passe para a esquerda para ver o próximo perfil ou para a direita para curtir. Para fechar, pressione Escape ou toque fora do modal."
+        hideHeading
+        wide
+      >
+        {error && (
+          <div className="error-banner" role="alert">
+            <span>{error}</span>
+            <button type="button" className="icon-button" onClick={() => setError("")} aria-label="Fechar erro">
+              <X size={16} />
+            </button>
+          </div>
+        )}
+        <SwipeDiscover
+          key={`${activeDogId}:${JSON.stringify(appliedFilters)}`}
+          dogs={dogs}
+          likedDogs={likedDogs}
+          activeDog={activeDog}
+          busy={busy}
+          loadingMore={loadingMore}
+          nextCursor={nextCursor}
+          loadMoreError={loadMoreError}
+          onLoadMore={loadMore}
+          onLike={like}
+          onManageDogs={() => {
+            setCrushOpen(false);
+            void navigate("dogs");
+          }}
+        />
+      </Modal>
+      <Modal
         open={authOpen}
         onClose={() => setAuthOpen(false)}
         title="Oi, que bom ter você aqui!"
         description="Seu cachorro merece um namorinho. Vamos começar?"
       >
         <AuthForm
-          onSuccess={(viewer, registered) =>
-            void authenticated(viewer, registered)
+          onSuccess={(viewer) =>
+            void authenticated(viewer)
           }
         />
       </Modal>
@@ -1049,26 +991,30 @@ export function PetApp({
       <Modal
         open={!!detail}
         onClose={() => setDetail(null)}
-        title={detail ? `Conheça ${detail.name}` : "Perfil"}
+        title={detail ? `Perfil de ${detail.name}` : "Perfil"}
+        header={detail && (
+          <div className="detail-heading">
+            <span className="detail-breed">{detail.breed}</span>
+            <p className="detail-name">
+              {detail.name} <span>{detail.sex === "MALE" ? <Mars size={24} strokeWidth={3} aria-label="Macho" /> : <Venus size={24} strokeWidth={3} aria-label="Fêmea" />}</span>
+            </p>
+            <p className="dog-location">
+              <MapPin size={14} />
+              {detail.city}, {detail.state}
+            </p>
+            <div className="detail-facts">
+              <span>{ageLabel(detail.ageMonths)}</span>
+              <span>Porte {detail.size.toLowerCase()}</span>
+              <span>{detail.sex === "MALE" ? "Macho" : "Fêmea"}</span>
+            </div>
+          </div>
+        )}
         wide
       >
         {detail && (
           <div className="dog-detail">
             <PhotoGallery key={detail.id} dog={detail} />
             <div className="detail-info">
-              <span className="detail-breed">{detail.breed}</span>
-              <h2>
-                {detail.name} <span>{detail.sex === "MALE" ? "♂" : "♀"}</span>
-              </h2>
-              <p className="dog-location">
-                <MapPin size={14} />
-                {detail.city}, {detail.state}
-              </p>
-              <div className="detail-facts">
-                <span>{ageLabel(detail.ageMonths)}</span>
-                <span>Porte {detail.size.toLowerCase()}</span>
-                <span>{detail.sex === "MALE" ? "Macho" : "Fêmea"}</span>
-              </div>
               <p className="detail-bio">{detail.bio}</p>
               <h4>O que a família contou</h4>
               {detail.vaccinated || detail.pedigree || detail.healthTests ? (
@@ -1095,7 +1041,7 @@ export function PetApp({
                   ? "Coraçãozinho enviado"
                   : "Mandar um coração"}
               </button>
-              {tab === "discover" && discoverMode === "grid" && (
+              {tab === "discover" && !crushOpen && (
                 <button type="button" className="secondary-button" disabled={!!messagingId}
                   onClick={() => void message(detail)}>
                   <MessageCircle size={17} /> Mandar mensagem

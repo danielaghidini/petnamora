@@ -1,25 +1,27 @@
 "use client";
-import { ArrowUpRight, Heart, MapPin, BadgeCheck, LoaderCircle, MessageCircle } from "lucide-react";
+import { ArrowUpRight, MapPin, BadgeCheck, Heart, LoaderCircle, Mars, MessageCircle, Venus } from "lucide-react";
 import type { DogProfile } from "./types";
 import { ageLabel } from "./types";
 export function DogCard({
   dog,
-  liked,
-  onLike,
   onOpen,
-  busy,
   onMessage,
   messageBusy,
   messageDisabled,
+  onLike,
+  liked,
+  likeBusy,
+  likeDisabled,
 }: {
   dog: DogProfile;
-  liked: boolean;
-  onLike: () => void;
   onOpen: () => void;
-  busy?: boolean;
   onMessage?: () => void;
   messageBusy?: boolean;
   messageDisabled?: boolean;
+  onLike?: () => void;
+  liked?: boolean;
+  likeBusy?: boolean;
+  likeDisabled?: boolean;
 }) {
   return (
     <article className="dog-card">
@@ -37,18 +39,9 @@ export function DogCard({
           />
         </button>
         <span className={`sex-badge ${dog.sex === "MALE" ? "male" : "female"}`}>
-          {dog.sex === "MALE" ? "♂ Macho" : "♀ Fêmea"}
+          {dog.sex === "MALE" ? <Mars size={14} strokeWidth={3} aria-hidden="true" /> : <Venus size={14} strokeWidth={3} aria-hidden="true" />}
+          {dog.sex === "MALE" ? "Macho" : "Fêmea"}
         </span>
-        <button
-          className={`heart-button ${liked ? "is-liked" : ""}`}
-          onClick={onLike}
-          disabled={busy || liked}
-          aria-label={
-            liked ? `Coração já enviado para ${dog.name}` : `Curtir ${dog.name}`
-          }
-        >
-          <Heart size={19} fill={liked ? "currentColor" : "none"} />
-        </button>
       </div>
       <div className="dog-card-body">
         <div className="dog-title">
@@ -80,12 +73,24 @@ export function DogCard({
           )}
           {!dog.pedigree && !dog.vaccinated && <span>Conheça esse amor</span>}
         </div>
-        {onMessage && (
-          <button type="button" className="secondary-button dog-message-button" onClick={onMessage}
-            disabled={messageBusy || messageDisabled} aria-label={`Mandar mensagem para a família de ${dog.name}`}>
-            {messageBusy ? <LoaderCircle size={17} className="spin" /> : <MessageCircle size={17} />}
-            {messageBusy ? "Abrindo conversa…" : "Mandar mensagem"}
-          </button>
+        {(onMessage || onLike) && (
+          <div className="dog-card-actions">
+            {onMessage && (
+              <button type="button" className="secondary-button" onClick={onMessage}
+                disabled={messageBusy || messageDisabled} aria-label={`Mandar mensagem para a família de ${dog.name}`}>
+                {messageBusy ? <LoaderCircle size={17} className="spin" aria-hidden="true" /> : <MessageCircle size={17} aria-hidden="true" />}
+                {messageBusy ? "Abrindo…" : "Mensagem"}
+              </button>
+            )}
+            {onLike && (
+              <button type="button" className="primary-button" onClick={onLike}
+                disabled={liked || likeBusy || likeDisabled} aria-pressed={!!liked}
+                aria-label={liked ? `Curtida enviada para ${dog.name}` : `Curtir ${dog.name}`}>
+                {likeBusy ? <LoaderCircle size={17} className="spin" aria-hidden="true" /> : <Heart size={17} fill={liked ? "currentColor" : "none"} aria-hidden="true" />}
+                {likeBusy ? "Curtindo…" : liked ? "Curtido" : "Curtir"}
+              </button>
+            )}
+          </div>
         )}
       </div>
     </article>
