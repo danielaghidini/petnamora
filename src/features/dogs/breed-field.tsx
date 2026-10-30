@@ -9,6 +9,7 @@ export function BreedField({ defaultValue = "" }: { defaultValue?: string }) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const search = useRef<HTMLInputElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
   const customInput = useRef<HTMLInputElement>(null);
   const customRequested = useRef(false);
   const list = useRef<HTMLDivElement>(null);
@@ -38,7 +39,8 @@ export function BreedField({ defaultValue = "" }: { defaultValue?: string }) {
   return (
     <div className="form-field breed-field">
       <label htmlFor={`${id}-trigger`}>Raça</label>
-      <Popover.Root open={open} onOpenChange={(next) => { setOpen(next); setQuery(""); setActiveIndex(0); }}>
+      {/* Own the scroll lock so the parent dialog allows touch scrolling in this portal. */}
+      <Popover.Root modal open={open} onOpenChange={(next) => { setOpen(next); setQuery(""); setActiveIndex(0); }}>
         <Popover.Trigger asChild>
           <button ref={trigger} id={`${id}-trigger`} type="button" className="select-trigger breed-picker-trigger"
             role="combobox" aria-expanded={open} aria-controls={`${id}-dialog`} aria-haspopup="dialog"
@@ -55,8 +57,14 @@ export function BreedField({ defaultValue = "" }: { defaultValue?: string }) {
           </button>
         </Popover.Trigger>
         <Popover.Portal>
-          <Popover.Content id={`${id}-dialog`} className="breed-picker-panel" sideOffset={6} collisionPadding={12} aria-label="Escolher raça"
-            onOpenAutoFocus={(event) => { event.preventDefault(); search.current?.focus(); }}
+          <Popover.Content ref={panel} id={`${id}-dialog`} className="breed-picker-panel" sideOffset={6} collisionPadding={12} aria-label="Escolher raça"
+            tabIndex={-1}
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              // Keep the mobile keyboard closed until the user chooses to search.
+              if (window.matchMedia("(pointer: coarse)").matches) panel.current?.focus();
+              else search.current?.focus();
+            }}
             onCloseAutoFocus={(event) => {
               if (customRequested.current) {
                 event.preventDefault();
@@ -86,7 +94,8 @@ export function BreedField({ defaultValue = "" }: { defaultValue?: string }) {
               {options.map((breed, index) => (
                 <button key={breed} type="button" role="option" tabIndex={-1} id={`${id}-option-${index}`}
                   aria-selected={selected === breed} className="breed-picker-option" data-highlighted={index === activeIndex || undefined}
-                  onMouseDown={(event) => event.preventDefault()} onPointerMove={() => setActiveIndex(index)}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onPointerMove={(event) => { if (event.pointerType === "mouse") setActiveIndex(index); }}
                   onClick={() => choose(breed)}>
                   <span>{breed === OTHER_BREED ? "Outros" : breed}{breed === OTHER_BREED && <small>Raça que não está na lista</small>}</span>
                   {selected === breed && <Check size={18} aria-hidden="true" />}

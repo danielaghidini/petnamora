@@ -1959,6 +1959,7 @@ h1 {
   max-height: 240px;
   overflow-y: auto;
   overscroll-behavior: contain;
+  touch-action: pan-y pinch-zoom;
 }
 .breed-picker-option {
   display: flex;
@@ -1991,6 +1992,17 @@ h1 {
 }
 .breed-picker-panel .breed-filter-actions {
   flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .breed-picker-panel {
+    max-height: min(560px, var(--radix-popover-content-available-height));
+  }
+  .breed-picker-panel .breed-filter-hint {
+    flex-shrink: 0;
+  }
+  .breed-picker-options {
+    max-height: 360px;
+  }
 }
 .breed-other-label {
   margin-top: 5px;
