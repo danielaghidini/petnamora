@@ -594,11 +594,11 @@ export function PetApp({
             <>
               <section className="hero-banner">
                 <div className="hero-copy">
-                  <h2>
+                  <h1>
                     Todo focinho merece um chamego.
                     <br />
-                    <span>Cadastre seu peludinho e encontre o par perfeito!</span>
-                  </h2>
+                    <span>Encontre um par para seu cachorro!</span>
+                  </h1>
                   <p>
                     Encontre um crush pro seu cachorro e combine o primeiro
                     encontro.

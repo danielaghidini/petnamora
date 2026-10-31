@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { siteUrl } from "@/lib/site";
 import { DEFAULT_THEME, themeInitializationScript } from "@/lib/theme";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "Pet Namora — Um namorinho de quatro patas",
+  metadataBase: siteUrl,
+  title: "Pet Namora | Encontre um par para seu cachorro",
   description:
-    "Um namorinho pro seu cachorro! Conheça os crushes de quatro patas, mande um coração e combine o encontro com a outra família no Pet Namora.",
+    "Encontre um par para seu cachorro no Pet Namora. Busque por raça e cidade, conheça os perfis e converse com outras famílias para combinar um encontro.",
   robots: { index: false, follow: false },
 };
 export default function RootLayout({

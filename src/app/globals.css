@@ -793,13 +793,13 @@ h1 {
   color: #e4c7ee;
   margin-bottom: 12px;
 }
-.hero-copy h2 {
+.hero-copy h1 {
   font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.7px;
   line-height: 1.35;
 }
-.hero-copy h2 span {
+.hero-copy h1 span {
   color: #f5bfd5;
 }
 .hero-copy p {
@@ -2476,7 +2476,7 @@ h1 {
   .hero-banner {
     min-height: 245px;
   }
-  .hero-copy h2 {
+  .hero-copy h1 {
     font-size: 30px;
   }
   .hero-copy p {
@@ -2527,7 +2527,7 @@ h1 {
   .hero-copy {
     max-width: 60%;
   }
-  .hero-copy h2 {
+  .hero-copy h1 {
     font-size: 21px;
   }
   .hero-art {
@@ -2676,7 +2676,7 @@ h1 {
     min-height: 225px;
     padding: 24px 21px;
   }
-  .hero-copy h2 {
+  .hero-copy h1 {
     font-size: 22px;
     max-width: 380px;
   }
@@ -2896,7 +2896,7 @@ h1 {
   .dog-card-body {
     padding: 10px;
   }
-  .hero-copy h2 {
+  .hero-copy h1 {
     font-size: 20px;
   }
   .hero-art {

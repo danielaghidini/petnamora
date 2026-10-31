@@ -1,9 +1,14 @@
+import type { Metadata } from "next";
 import { currentUser } from "@/lib/auth";
 import { allowedDog, discover, publicDogFields } from "@/features/dogs/service";
 import { db } from "@/lib/prisma";
 import { PetApp } from "@/features/dogs/pet-app";
 import { googleAuthErrorMessage } from "@/lib/google-auth-messages";
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  robots: { index: true, follow: true },
+};
 export default async function Home({ searchParams }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
