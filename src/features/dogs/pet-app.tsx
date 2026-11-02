@@ -5,6 +5,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import {
   ArrowRight,
   BadgeCheck,
+  BookOpen,
   ClipboardCheck,
   Compass,
   Flag,
@@ -434,6 +435,9 @@ export function PetApp({
               {item.id === "discover" && <span className="nav-dot" />}
             </button>
           ))}
+          <Link href="/blog" className="nav-item">
+            <BookOpen size={20} aria-hidden="true" /> <span>Blog</span>
+          </Link>
           {user?.isAdmin && (
             <Link href="/admin" className="nav-item">
               <ShieldCheck size={20} /> <span>Administração</span>
@@ -517,6 +521,9 @@ export function PetApp({
                       <span>{item.label}</span>
                     </button>
                   ))}
+                  <Link href="/blog" className="nav-item" onClick={() => setMenuOpen(false)}>
+                    <BookOpen size={20} aria-hidden="true" /> Blog
+                  </Link>
                   {user?.isAdmin && (
                     <Link href="/admin" className="nav-item" onClick={() => setMenuOpen(false)}>
                       <ShieldCheck size={20} aria-hidden="true" /> Administração

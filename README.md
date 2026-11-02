@@ -115,6 +115,8 @@ Após `npm run build`, `npm run test:admin` inicia uma instância temporária do
 
 ## Estrutura
 
+O blog público fica em `/blog`. Consulte [o guia editorial e técnico](docs/BLOG.md) para adicionar matérias, preparar capas e publicar pelo fluxo do projeto.
+
 ```text
 src/app/                 Next.js App Router e endpoints HTTP
 src/features/dogs/       regras, contratos, validação e componentes do produto
