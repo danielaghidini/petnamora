@@ -605,8 +605,8 @@ export function PetApp({
                     Todo focinho merece um chamego!
                     <br />
                     <span>
-                      Nossa plataforma é nova, ainda não temos muitos cachorrinhos.
-                      Cadastre o seu e ajude nosso serviço a crescer! É rápido e gratuito!
+                      Nossa plataforma é nova, ainda não temos muitos amiguinhos.
+                      Cadastre o seu e ajude nossa comunidade a crescer! É rápido e gratuito!
                     </span>
                   </h1>
                   <button onClick={addDog}>
