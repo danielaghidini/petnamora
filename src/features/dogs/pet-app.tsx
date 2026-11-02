@@ -597,12 +597,11 @@ export function PetApp({
                   <h1>
                     Todo focinho merece um chamego.
                     <br />
-                    <span>Encontre um par para seu cachorro!</span>
+                    <span>
+                      O Pet Namora é novo e gratuito! Seja um dos primeiros da sua
+                      cidade a cadastrar seu cachorro e ajude nossa comunidade a crescer.
+                    </span>
                   </h1>
-                  <p>
-                    O Pet Namora é novo e gratuito! Seja um dos primeiros da sua
-                    cidade a cadastrar seu cachorro e ajude nossa comunidade a crescer.
-                  </p>
                   <button onClick={addDog}>
                     Cadastrar meu cachorro <ArrowRight size={16} />
                   </button>
