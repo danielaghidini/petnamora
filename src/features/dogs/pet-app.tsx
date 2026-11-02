@@ -606,7 +606,7 @@ export function PetApp({
                     <br />
                     <span>
                       Nossa plataforma é nova, ainda não temos muitos amiguinhos.
-                      Cadastre o seu e ajude nossa comunidade a crescer! É rápido e gratuito!
+                      Cadastre o seu cachorro e ajude nossa comunidade a crescer! É rápido e gratuito!
                     </span>
                   </h1>
                   <button onClick={addDog}>
