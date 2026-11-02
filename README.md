@@ -38,6 +38,8 @@ A instalação começa sem perfis, curtidas ou conversas. Não há carga automá
 
 ## Carga opcional de perfis
 
+A carga fictícia de produção de 28/10/2026 é removida pela migração `20261102180000_remove_seed_profiles`, usando os 50 IDs de cachorro, IDs de tutor e e-mails exatos do manifesto. Cadastros reais são preservados, inclusive cães adicionais de um antigo tutor fictício. As fotos entram na fila persistente de limpeza da administração. A página inicial informa que a comunidade é nova e gratuita e convida os primeiros tutores a participar.
+
 `npm run seed:profiles -- --url=https://petnamora.com.br` cadastra explicitamente 50 tutores fictícios e 50 cachorros pelos endpoints normais do site, sem deploy ou acesso direto ao banco. Para outro ambiente, informe sua origem em `--url`. `npm run seed:profiles -- --dry-run` apenas mostra o conteúdo planejado, sem requisições nem gravações.
 
 Os perfis têm nomes e biografias naturais, dez raças, ambos os sexos, três portes, idades adultas e cidades brasileiras. E-mails usam o domínio reservado `example.com`. As fotos ilustrativas vêm das galerias por raça da [Dog API](https://dog.ceo/dog-api/documentation/breed) e passam pelo upload da aplicação, inclusive Cloudflare em produção. A carga não cria curtidas, matches ou mensagens.

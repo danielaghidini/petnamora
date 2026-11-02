@@ -600,8 +600,8 @@ export function PetApp({
                     <span>Encontre um par para seu cachorro!</span>
                   </h1>
                   <p>
-                    Encontre um crush pro seu cachorro e combine o primeiro
-                    encontro.
+                    O Pet Namora é novo e gratuito! Seja um dos primeiros da sua
+                    cidade a cadastrar seu cachorro e ajude nossa comunidade a crescer.
                   </p>
                   <button onClick={addDog}>
                     Cadastrar meu cachorro <ArrowRight size={16} />
@@ -774,14 +774,14 @@ export function PetApp({
                       ? "Nenhum coraçãozinho por aqui… ainda!"
                       : activeFilterCount > 0
                         ? "Nenhum cachorro encontrado"
-                        : "Os primeiros namorinhos começam aqui"}
+                        : "Seja um dos primeiros da sua cidade!"}
                   </h3>
                   <p>
                     {tab === "likes"
                       ? "Conheça os cachorros e mande o primeiro coração."
                       : activeFilterCount > 0
                         ? "Tente outra raça ou cidade para ampliar a busca."
-                        : "Ainda não há outros cachorros disponíveis. Cadastre o seu e volte para conhecer quem chegar."}
+                        : "Nossa comunidade está começando e ainda não há outros cachorros disponíveis por aqui. Cadastre o seu gratuitamente e volte para conhecer quem chegar."}
                   </p>
                   <button
                     className="secondary-button"
