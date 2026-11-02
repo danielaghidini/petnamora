@@ -595,10 +595,11 @@ export function PetApp({
               <section className="hero-banner">
                 <div className="hero-copy">
                   <h1>
-                    Todo focinho merece um chamego.
+                    Todo focinho merece um chamego!
                     <br />
                     <span>
-                      A gente tá só começando. Vem com seu cachorro, é grátis! 💕
+                      Nossa plataforma é nova, ainda não temos muitos cachorrinhos.
+                      Cadastre o seu e ajude nosso serviço a crescer! É rápido e gratuito!
                     </span>
                   </h1>
                   <button onClick={addDog}>
