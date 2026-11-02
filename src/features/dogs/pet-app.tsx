@@ -598,8 +598,7 @@ export function PetApp({
                     Todo focinho merece um chamego.
                     <br />
                     <span>
-                      O Pet Namora é novo e gratuito! Seja um dos primeiros da sua
-                      cidade a cadastrar seu cachorro e ajude nossa comunidade a crescer.
+                      A gente tá só começando. Vem com seu cachorro, é grátis! 💕
                     </span>
                   </h1>
                   <button onClick={addDog}>
