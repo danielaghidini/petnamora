@@ -1,0 +1,71 @@
+.close {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  section.banner {
+    display: block;
+    min-height: 0;
+    padding: 22px;
+    margin-bottom: 21px;
+  }
+
+  section.banner.dismissed {
+    display: none;
+  }
+
+  .banner :global(.hero-art),
+  .banner :global(.hero-paw) {
+    display: none;
+  }
+
+  .banner .copy {
+    max-width: none;
+    width: 100%;
+  }
+
+  .banner .copy h1 {
+    max-width: none;
+    padding-right: 28px;
+    font-size: 19px;
+    line-height: 1.4;
+    letter-spacing: -.3px;
+  }
+
+  .banner .copy h1 > br {
+    display: none;
+  }
+
+  .banner .copy h1 > span {
+    display: block;
+    margin-top: 10px;
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0;
+  }
+
+  .banner .copy > button {
+    min-height: 44px;
+    margin-top: 16px;
+  }
+
+  .close {
+    position: absolute;
+    z-index: 3;
+    top: 8px;
+    right: 8px;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 8px;
+    color: #fff;
+  }
+
+  .close:hover,
+  .close:focus-visible {
+    background: #ffffff1f;
+  }
+}

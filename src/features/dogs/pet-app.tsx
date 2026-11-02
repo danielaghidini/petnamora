@@ -35,6 +35,7 @@ import { Chat } from "./chat";
 import { BreedFilter } from "./breed-filter";
 import { SwipeDiscover } from "./swipe-discover";
 import { ActiveDogPicker } from "./active-dog-picker";
+import { CommunityInvite } from "./community-invite";
 import type { LikeOutcome } from "./swipe";
 import {
   ageLabel,
@@ -94,6 +95,8 @@ export function PetApp({
   const [myDogs, setMyDogs] = useState(initialMyDogs);
   const [activeDogId, setActiveDogId] = useState(initialMyDogs[0]?.id || "");
   const [tab, setTab] = useState<Tab>("discover");
+  const [mobileInviteDismissed, setMobileInviteDismissed] = useState(false);
+  const discoverSearchRef = useRef<HTMLFormElement>(null);
   const [crushOpen, setCrushOpen] = useState(false);
   const [likedDogs, setLikedDogs] = useState<DogProfile[]>(initialLikedDogs);
   const [matches, setMatches] = useState<MatchProfile[]>([]);
@@ -599,29 +602,15 @@ export function PetApp({
           )}
           {tab === "discover" && (
             <>
-              <section className="hero-banner">
-                <div className="hero-copy">
-                  <h1>
-                    Todo focinho merece um chamego!
-                    <br />
-                    <span>
-                      Nossa plataforma é nova, ainda não temos muitos amiguinhos.
-                      Cadastre o seu cachorro e ajude nossa comunidade a crescer! É rápido e gratuito!
-                    </span>
-                  </h1>
-                  <button onClick={addDog}>
-                    Cadastrar meu cachorro <ArrowRight size={16} />
-                  </button>
-                </div>
-                <div className="hero-art">
-                  <img
-                    src="/brand/petnamora-banner-03.png"
-                    alt="Pet Namora: dois cachorros juntos em um coração rosa"
-                  />
-                </div>
-                <PawPrint className="hero-paw" size={120} />
-              </section>
-              <form className="search-panel" onSubmit={filter}>
+              <CommunityInvite
+                dismissed={mobileInviteDismissed}
+                onDismiss={() => {
+                  setMobileInviteDismissed(true);
+                  requestAnimationFrame(() => discoverSearchRef.current?.querySelector<HTMLElement>("button, input")?.focus());
+                }}
+                onRegister={addDog}
+              />
+              <form ref={discoverSearchRef} className="search-panel" onSubmit={filter}>
                 <BreedFilter
                   value={filters.breeds}
                   onChange={(breeds) => setFilters((previous) => ({ ...previous, breeds }))}
